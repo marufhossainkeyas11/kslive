@@ -16,7 +16,7 @@
 
   <!-- KS in blue with glow, LIVE in grey -->
   <text
-    x="100" y="120"
+    x="100" y="115"
     font-family="'Bebas Neue', sans-serif"
     font-size="40"
     font-weight="700"
