@@ -1,3 +1,3 @@
 #EXTM3U
-#EXTINF:-1 tvg-id="tsports live" tvg-name="10 T sports" tvg-logo="https://raw.githubusercontent.com/subirkumarpaul/Logo/refs/heads/main/T%20Sports.png" group-title="IPTV",T-Sports
+#EXTINF:-1 tvg-id="tsports live" tvg-name="T-sports" tvg-logo="https://raw.githubusercontent.com/subirkumarpaul/Logo/refs/heads/main/T%20Sports.png" group-title="IPTV",T-Sports
 http://198.195.239.50:8095/tsports/tracks-v1a1/mono.m3u8
