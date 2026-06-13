@@ -6,7 +6,7 @@
      • A data URI (already loaded text)
      • An inline string (raw M3U content)
    ═══════════════════════════════════════════════════════ */
-const PLAYLISTS_JSON_URL = "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/playlists.js";
+const PLAYLISTS_JSON_URL = "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/playlists.json";
 
 let PLAYLISTS = [];
 
