@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" style="border-radius: 30%" width="200" height="200">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feFlood flood-color="rgba(33,150,243,0.4)" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- White background square -->
+  <rect width="200" height="200" fill="#ffffff08"/>
+
+  <!-- KS in blue with glow, LIVE in grey -->
+  <text
+    x="100" y="120"
+    font-family="'Bebas Neue', sans-serif"
+    font-size="40"
+    font-weight="700"
+    letter-spacing="5"
+    fill="#2196F3"
+    text-anchor="middle"
+    filter="url(#glow)"
+  >KS<tspan fill="#66686A" opacity="0.6">LIVE</tspan></text>
+</svg>
