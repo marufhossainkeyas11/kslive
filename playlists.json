@@ -4,6 +4,10 @@
     "url": "https://raw.githubusercontent.com/shamimpipon/Shamim-live-tv/refs/heads/main/Channel.m3u"
   },
   {
+    "name": "T-Sports",
+    "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/ts.m3u"
+  },
+  {
     "name": "Tapmad Sports",
     "url": "https://raw.githubusercontent.com/srhady/tapmad-bd/refs/heads/main/tapmad_bd.m3u"
   },
