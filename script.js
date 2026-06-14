@@ -948,6 +948,7 @@ function showPlaylistPopup() {
       switchPlaylist(idx);
       closePopup();
       updateMobilePlaylistBtn();
+      if (window.innerWidth <= 768)  sidebar.classList.add('mobile-open');
     });
     popup.appendChild(row);
   });
