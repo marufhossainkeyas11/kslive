@@ -1002,6 +1002,65 @@ if (!document.documentElement.requestFullscreen) {
 window.addEventListener('resize', checkMobile);
 checkMobile();
 
+/* ── LONG PRESS 1.5x SPEED ─────────── */
+(function () {
+  const LONG_PRESS_MS = 500;
+  const FAST_SPEED    = 1.5;
+  const speedEl       = $('speedIndicator');
+
+  let pressTimer  = null;
+  let isFast      = false;
+  let normalSpeed = 1;
+
+  function startFast() {
+    if (state.currentIdx === -1 || isFast) return;
+    if (videoEl.paused || videoEl.readyState < 2) return;
+    isFast      = true;
+    normalSpeed = videoEl.playbackRate || 1;
+    videoEl.playbackRate = FAST_SPEED;
+
+    // controls hide
+    videoWrap.classList.remove('controls-visible');
+    clearTimeout(hideTimer);
+
+    // indicator show
+    speedEl.classList.add('show');
+  }
+
+  function stopFast() {
+    if (!isFast) return;
+    isFast = false;
+    videoEl.playbackRate = normalSpeed;
+    speedEl.classList.remove('show');
+  }
+
+  function cancelPress() {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+
+  // ── Touch ──
+  videoWrap.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    cancelPress();
+    pressTimer = setTimeout(startFast, LONG_PRESS_MS);
+  }, { passive: true });
+
+  videoWrap.addEventListener('touchend',    () => { cancelPress(); stopFast(); });
+  videoWrap.addEventListener('touchcancel', () => { cancelPress(); stopFast(); });
+  videoWrap.addEventListener('touchmove',   () => { cancelPress(); stopFast(); });
+
+  // ── Mouse (desktop) ──
+  videoWrap.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    cancelPress();
+    pressTimer = setTimeout(startFast, LONG_PRESS_MS);
+  });
+
+  window.addEventListener('mouseup',   () => { cancelPress(); stopFast(); });
+  videoWrap.addEventListener('mouseleave', () => { cancelPress(); stopFast(); });
+})();
+
 // Close sidebar on mobile after channel selection
 const origPlay = playChannel;
 function playChannelWithClose(idx) {
