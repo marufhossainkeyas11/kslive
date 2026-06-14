@@ -12,6 +12,10 @@
     "url": "https://raw.githubusercontent.com/srhady/tapmad-bd/refs/heads/main/tapmad_bd.m3u"
   },
   {
+    "name": "Fancode Sports",
+    "url": "https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u"
+  },
+  {
     "name": "Toffee (🔒)",
     "url": "https://toffee-stream-keeper.lovable.app/toffee.m3u"
   }
