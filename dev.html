@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HLS Player</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0d0d0d; color: #eee; font-family: sans-serif; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+  h2 { margin: 20px 0 10px; font-size: 1rem; color: #aaa; }
+  video { width: 100%; max-width: 900px; background: #000; border-radius: 8px; }
+  .controls { width: 100%; max-width: 900px; margin-top: 12px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  input[type=text] { flex: 1; padding: 8px 12px; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; color: #eee; font-size: 0.85rem; min-width: 0; }
+  button { padding: 8px 16px; background: #2563eb; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 0.85rem; white-space: nowrap; }
+  button:hover { background: #1d4ed8; }
+  select { padding: 8px 10px; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; color: #eee; font-size: 0.85rem; }
+  .status { margin-top: 10px; font-size: 0.8rem; color: #888; width: 100%; max-width: 900px; }
+  .playlist { width: 100%; max-width: 900px; margin-top: 20px; }
+  .playlist h3 { font-size: 0.85rem; color: #666; margin-bottom: 8px; }
+  .ch { padding: 10px 14px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 6px; margin-bottom: 6px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
+  .ch:hover { background: #222; }
+  .ch img { width: 48px; height: 30px; object-fit: cover; border-radius: 4px; background: #111; }
+  .ch-info { flex: 1; }
+  .ch-title { font-size: 0.82rem; color: #ddd; }
+  .ch-group { font-size: 0.72rem; color: #555; margin-top: 2px; }
+  .error { color: #f87171; font-size: 0.8rem; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<h2>▶ HLS / M3U8 Player</h2>
+<video id="video" controls autoplay playsinline></video>
+
+<div class="controls">
+  <input type="text" id="urlInput" placeholder=".m3u8 বা .m3u playlist লিংক দাও..." />
+  <button onclick="loadUrl()">Load</button>
+  <select id="quality" onchange="changeQuality()" style="display:none"></select>
+</div>
+<div class="status" id="status"></div>
+<div class="error" id="error"></div>
+
+<div class="playlist" id="playlistSection" style="display:none">
+  <h3>📋 Playlist চ্যানেলগুলো:</h3>
+  <div id="channels"></div>
+</div>
+
+<script>
+let hls = null;
+const video = document.getElementById('video');
+const status = document.getElementById('status');
+const errEl = document.getElementById('error');
+
+// Auto-load from the provided m3u8
+const DEFAULT_M3U = 'https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u';
+loadM3UPlaylist(DEFAULT_M3U);
+
+function setStatus(msg) { status.textContent = msg; }
+function setError(msg) { errEl.textContent = msg; }
+function clearError() { errEl.textContent = ''; }
+
+function loadUrl() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+  clearError();
+  if (url.endsWith('.m3u') || url.endsWith('.m3u8') && !url.includes('fancode.com')) {
+    // Check if it's a master playlist or channel list
+    fetch(url).then(r => r.text()).then(txt => {
+      if (txt.includes('#EXTINF')) {
+        parseAndShowM3U(txt);
+      } else {
+        playHLS(url);
+      }
+    }).catch(() => playHLS(url));
+  } else {
+    playHLS(url);
+  }
+}
+
+async function loadM3UPlaylist(url) {
+  setStatus('Playlist লোড হচ্ছে...');
+  try {
+    const r = await fetch(url);
+    const txt = await r.text();
+    parseAndShowM3U(txt);
+    setStatus('Playlist লোড হয়েছে।');
+  } catch(e) {
+    setStatus('');
+    setError('Playlist লোড হয়নি: ' + e.message);
+  }
+}
+
+function parseAndShowM3U(txt) {
+  const lines = txt.split('\n').map(l => l.trim()).filter(Boolean);
+  const channels = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].startsWith('#EXTINF')) {
+      const meta = lines[i];
+      const url = lines[i+1] || '';
+      if (!url || url.startsWith('#')) continue;
+      const logoMatch = meta.match(/tvg-logo="([^"]+)"/);
+      const groupMatch = meta.match(/group-title="([^"]+)"/);
+      const title = meta.replace(/#EXTINF:[^,]+,/, '').trim();
+      channels.push({ title, logo: logoMatch?.[1] || '', group: groupMatch?.[1] || '', url });
+      i++;
+    }
+  }
+  if (!channels.length) return;
+  const sec = document.getElementById('playlistSection');
+  const container = document.getElementById('channels');
+  sec.style.display = 'block';
+  container.innerHTML = '';
+  channels.forEach(ch => {
+    const div = document.createElement('div');
+    div.className = 'ch';
+    div.innerHTML = `
+      ${ch.logo ? `<img src="${ch.logo}" onerror="this.style.display='none'">` : ''}
+      <div class="ch-info">
+        <div class="ch-title">${ch.title}</div>
+        <div class="ch-group">${ch.group}</div>
+      </div>
+    `;
+    div.onclick = () => loadChannelUrl(ch.url, ch.title);
+    container.appendChild(div);
+  });
+}
+
+async function loadChannelUrl(url, title) {
+  clearError();
+  setStatus(`"${title}" লোড হচ্ছে...`);
+  // This url might itself be an m3u8 master playlist on github
+  try {
+    const r = await fetch(url);
+    const txt = await r.text();
+    // If it's a master HLS playlist (contains stream-inf), pick it directly
+    if (txt.includes('#EXT-X-STREAM-INF')) {
+      // The actual URLs inside might be absolute
+      const firstUrl = txt.split('\n').find(l => l.trim() && !l.startsWith('#'));
+      if (firstUrl) {
+        // Use the master url itself for hls.js (it handles quality selection)
+        playHLS(url, txt);
+      }
+    } else {
+      playHLS(url);
+    }
+  } catch(e) {
+    playHLS(url);
+  }
+}
+
+function playHLS(masterUrl, preloadedText) {
+  clearError();
+  if (hls) { hls.destroy(); hls = null; }
+  const qsel = document.getElementById('quality');
+  qsel.style.display = 'none';
+  qsel.innerHTML = '';
+
+  if (Hls.isSupported()) {
+    hls = new Hls({ xhrSetup: xhr => {} });
+    hls.loadSource(masterUrl);
+    hls.attachMedia(video);
+
+    hls.on(Hls.Events.MANIFEST_PARSED, (e, data) => {
+      const levels = data.levels;
+      if (levels.length > 1) {
+        qsel.style.display = '';
+        const autoOpt = document.createElement('option');
+        autoOpt.value = -1;
+        autoOpt.textContent = 'Auto Quality';
+        qsel.appendChild(autoOpt);
+        levels.forEach((l, i) => {
+          const opt = document.createElement('option');
+          opt.value = i;
+          opt.textContent = l.height ? `${l.height}p` : `Level ${i}`;
+          qsel.appendChild(opt);
+        });
+      }
+      setStatus(`স্ট্রিম শুরু হচ্ছে... (${levels.length} quality)`);
+      video.play().catch(() => {});
+    });
+
+    hls.on(Hls.Events.ERROR, (e, data) => {
+      if (data.fatal) {
+        setError('স্ট্রিম লোড হয়নি। লিংকের মেয়াদ শেষ হয়ে গেছে বা CORS ব্লক করছে।');
+        setStatus('');
+      }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari native HLS
+    video.src = masterUrl;
+    video.play().catch(() => {});
+    setStatus('Native HLS (Safari)');
+  } else {
+    setError('এই ব্রাউজারে HLS সাপোর্ট নেই।');
+  }
+}
+
+function changeQuality() {
+  if (!hls) return;
+  const val = parseInt(document.getElementById('quality').value);
+  hls.currentLevel = val;
+}
+</script>
+</body>
+</html>
