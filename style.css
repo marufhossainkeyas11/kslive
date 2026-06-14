@@ -735,6 +735,39 @@ video {
 }
 .loader-text { font-size: 13px; color: var(--t2); }
 
+.speed-indicator {
+  position: absolute;
+  top: 9%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 15;
+}
+.speed-indicator.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+.speed-indicator-icon {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 50px;
+  padding: 2px 7px;
+}
+.speed-indicator-icon svg {
+  color: #fff;
+}
+
 /* ── ERROR STATE ────────────────────── */
 .error-state {
   display: none;
