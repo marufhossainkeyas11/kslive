@@ -4,8 +4,16 @@
     "url": "https://raw.githubusercontent.com/shamimpipon/Shamim-live-tv/refs/heads/main/Channel.m3u"
   },
   {
-    "name": "BD FIFA",
+    "name": "BD (Find channel)",
     "url": "https://raw.githubusercontent.com/rajufreedom71/rajuiptv/refs/heads/main/playlist.m3u"
+  },
+  {
+    "name": "120+ FIFA LIVE",
+    "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/120%2B%20FIFA%20LIVE.m3u"
+  },
+  {
+    "name": "crichd Sports",
+    "url": "https://raw.githubusercontent.com/abusaeeidx/CricHd-playlists-Auto-Update-permanent/refs/heads/main/ALL.m3u"
   },
   {
     "name": "Tapmad Sports",
