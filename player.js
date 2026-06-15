@@ -1,0 +1,565 @@
+/* ═══════════════════════════════════════════════════════
+   PLAYLIST CONFIG
+   ═══════════════════════════════════════════════════════ */
+const PLAYLISTS_JSON_URL = "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/playlists.json";
+let PLAYLISTS = [];
+
+
+/* ═══════════════════════════════════════════════════════
+   M3U PARSER
+   ═══════════════════════════════════════════════════════ */
+function parseM3U(text) {
+  const lines = text.split(/\r?\n/);
+  const channels = [];
+  let current = null;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    if (line.startsWith('#EXTM3U')) continue;
+    
+    if (line.startsWith('#EXTINF:')) {
+      current = {
+        name: '',
+        group: 'General',
+        logo: '',
+        tvgId: '',
+        url: '',
+        cookies: '',
+        userAgent: '',
+        referrer: '',
+        headers: {},
+        rawExtinf: line
+      };
+      const afterDuration = line.replace(/^#EXTINF:\s*-?\d+(\.\d+)?/, '');
+      const attrRx = /([\w-]+)="([^"]*)"/g;
+      let m;
+      while ((m = attrRx.exec(afterDuration)) !== null) {
+        const k = m[1].toLowerCase(),
+          v = m[2];
+        if (k === 'group-title') current.group = v || 'General';
+        else if (k === 'tvg-logo') current.logo = v;
+        else if (k === 'tvg-id') current.tvgId = v;
+        else if (k === 'tvg-name') current.name = v;
+        else if (k === 'tvg-chno') current.chno = v;
+        else if (k === 'user-agent') current.userAgent = v;
+        else if (k === 'referrer') current.referrer = v;
+        else if (k === 'cookie' || k === 'http-cookie') current.cookies = v;
+      }
+      const commaIdx = afterDuration.lastIndexOf(',');
+      if (commaIdx !== -1) {
+        const rawName = afterDuration.substring(commaIdx + 1).trim();
+        if (rawName && !current.name) current.name = rawName;
+      }
+      if (!current.name) current.name = 'Unknown Channel';
+      continue;
+    }
+    
+    if (line.startsWith('#EXTVLCOPT:') && current) {
+      const opt = line.replace('#EXTVLCOPT:', '').trim();
+      if (opt.startsWith('http-user-agent=')) current.userAgent = opt.split('=').slice(1).join('=');
+      else if (opt.startsWith('http-referrer=')) current.referrer = opt.split('=').slice(1).join('=');
+      else if (opt.startsWith('http-cookie=')) current.cookies = opt.split('=').slice(1).join('=');
+      continue;
+    }
+    
+    if ((line.startsWith('#KODIPROP:') || line.startsWith('#EXTHTTP:')) && current) {
+      const val = line.split(':').slice(1).join(':').trim();
+      if (val.startsWith('inputstream.adaptive.stream_headers=')) {
+        val.split('=').slice(1).join('=').split('&').forEach(pair => {
+          const [hk, hv] = pair.split('=');
+          if (hk && hv) current.headers[decodeURIComponent(hk)] = decodeURIComponent(hv);
+        });
+      }
+      if (val.startsWith('http-user-agent=')) current.userAgent = val.split('=').slice(1).join('=');
+      continue;
+    }
+    
+    if (current && !line.startsWith('#') && line.length > 0) {
+      current.url = line;
+      const hdrs = { ...current.headers };
+      if (current.userAgent) hdrs['User-Agent'] = current.userAgent;
+      if (current.referrer) hdrs['Referer'] = current.referrer;
+      if (current.cookies) hdrs['Cookie'] = current.cookies;
+      current.compiledHeaders = hdrs;
+      channels.push(current);
+      current = null;
+    }
+  }
+  return channels;
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   APP STATE
+   ═══════════════════════════════════════════════════════ */
+const state = {
+  playlists: [],
+  activePlaylist: 0,
+  channels: [],
+  filteredChannels: [],
+  activeGroup: 'All',
+  currentIdx: -1,
+  hls: null,
+  isPlaying: false,
+  isMuted: false,
+  retryCount: 0,
+  MAX_RETRY: 3
+};
+
+
+/* ═══════════════════════════════════════════════════════
+   DOM REFS
+   ═══════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const videoEl = $('videoEl');
+const channelList = $('channelList');
+const groupFilters = $('groupFilters');
+const searchInput = $('searchInput');
+const playlistTabs = $('playlistTabs');
+const npName = $('npName');
+const detailName = $('detailName');
+const detailLogo = $('detailLogo');
+const detailMeta = $('detailMeta');
+const streamUrlText = $('streamUrlText');
+const emptyState = $('emptyState');
+const channelDetail = $('channelDetail');
+const errorState = $('errorState');
+const bigPlay = $('bigPlay');
+const progressFill = $('progressFill');
+const timeDisplay = $('timeDisplay');
+const qualityBadge = $('qualityBadge');
+const connDot = $('connDot');
+const connStatus = $('connStatus');
+const chCount = $('chCount');
+const sidebar = $('sidebar');
+const loadingScreen = $('loadingScreen');
+const toastEl = $('toast');
+const videoWrap = $('videoWrap');
+const morePopup = $('morePopup');
+
+
+/* ═══════════════════════════════════════════════════════
+   UTILS
+   ═══════════════════════════════════════════════════════ */
+function escHtml(str) {
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escAttr(str) {
+  return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function fmtTime(s) {
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = Math.floor(s % 60);
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
+}
+
+// Persist last played
+function saveLastChannel(plIdx, chIdx) {
+  try { localStorage.setItem('sv_last', JSON.stringify({ plIdx, chIdx })); } catch {}
+}
+
+function loadLastChannel() {
+  try { return JSON.parse(localStorage.getItem('sv_last')); } catch { return null; }
+}
+
+// Toast
+let toastTimer;
+
+function showToast(msg, duration = 2500) {
+  clearTimeout(toastTimer);
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), duration);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   NETWORK — FETCH M3U
+   ═══════════════════════════════════════════════════════ */
+async function fetchM3U(pl) {
+  const { url, fetchHeaders } = pl;
+  if (!url.startsWith('http') && !url.startsWith('//')) return url;
+  
+  try {
+    const resp = await fetch(url, { headers: fetchHeaders || {}, cache: 'no-cache' });
+    if (resp.ok) return await resp.text();
+  } catch (e) {
+    console.warn('Direct fetch failed, trying CORS proxy…', e);
+  }
+  
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    `https://corsproxy.io/?${encodeURIComponent(url)}`
+  ];
+  for (const proxy of proxies) {
+    try {
+      const resp = await fetch(proxy);
+      if (resp.ok) return await resp.text();
+    } catch {}
+  }
+  throw new Error('Failed to fetch playlist after trying proxies.');
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   INIT — BOOT
+   ═══════════════════════════════════════════════════════ */
+async function init() {
+  try {
+    const res = await fetch(PLAYLISTS_JSON_URL + '?t=' + Date.now());
+    PLAYLISTS = await res.json();
+  } catch (e) {
+    console.error('Failed to load playlists config:', e);
+    PLAYLISTS = [];
+  }
+  
+  const results = await Promise.allSettled(
+    PLAYLISTS.map(async (pl) => {
+      const text = await fetchM3U(pl);
+      return { name: pl.name, channels: parseM3U(text) };
+    })
+  );
+  
+  results.forEach((r, i) => {
+    if (r.status === 'fulfilled') {
+      state.playlists.push(r.value);
+    } else {
+      console.error(`Playlist "${PLAYLISTS[i].name}" failed:`, r.reason);
+      state.playlists.push({ name: PLAYLISTS[i].name, channels: [], error: r.reason?.message });
+    }
+  });
+  
+  buildPlaylistTabs();
+  switchPlaylist(0);
+  
+  const last = loadLastChannel();
+  if (last && state.playlists[last.plIdx]?.channels[last.chIdx]) {
+    switchPlaylist(last.plIdx);
+    setTimeout(() => {
+      playChannel(last.chIdx);
+      setTimeout(() => videoEl.play().catch(() => {}), 1000);
+    }, 500);
+  }
+  
+  checkMobile();
+  setTimeout(() => loadingScreen.classList.add('hidden'), 600);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   PLAYLIST TABS
+   ═══════════════════════════════════════════════════════ */
+function buildPlaylistTabs() {
+  playlistTabs.innerHTML = '';
+  state.playlists.forEach((pl, idx) => {
+    const tab = document.createElement('button');
+    tab.className = 'pl-tab' + (idx === 0 ? ' active' : '');
+    tab.innerHTML = `<span class="dot"></span>${escHtml(pl.name)}
+      <span style="font-family:var(--m);font-size:10px;opacity:0.6;margin-left:2px">(${pl.channels.length})</span>`;
+    tab.addEventListener('click', () => switchPlaylist(idx));
+    playlistTabs.appendChild(tab);
+  });
+}
+
+function switchPlaylist(idx) {
+  state.activePlaylist = idx;
+  state.channels = state.playlists[idx]?.channels || [];
+  state.currentIdx = -1;
+  document.querySelectorAll('.pl-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  state.activeGroup = 'All';
+  buildGroupFilters();
+  applyFilter();
+  updateChCount();
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   SIDEBAR — GROUP FILTERS + CHANNEL LIST
+   ═══════════════════════════════════════════════════════ */
+function buildGroupFilters() {
+  const groups = ['All', ...new Set(state.channels.map(c => c.group))].sort((a, b) => {
+    if (a === 'All') return -1;
+    if (b === 'All') return 1;
+    return a.localeCompare(b);
+  });
+  groupFilters.innerHTML = '';
+  groups.forEach(g => {
+    const chip = document.createElement('div');
+    chip.className = 'g-chip' + (g === state.activeGroup ? ' active' : '');
+    chip.textContent = g;
+    chip.addEventListener('click', () => {
+      state.activeGroup = g;
+      document.querySelectorAll('.g-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      applyFilter();
+    });
+    groupFilters.appendChild(chip);
+  });
+}
+
+function applyFilter() {
+  const q = searchInput.value.toLowerCase().trim();
+  state.filteredChannels = state.channels.filter(ch => {
+    const groupMatch = state.activeGroup === 'All' || ch.group === state.activeGroup;
+    const nameMatch = !q || ch.name.toLowerCase().includes(q) || (ch.group || '').toLowerCase().includes(q);
+    return groupMatch && nameMatch;
+  });
+  renderChannelList();
+}
+
+function renderChannelList() {
+  channelList.innerHTML = '';
+  const grouped = {};
+  state.filteredChannels.forEach(ch => {
+    if (!grouped[ch.group]) grouped[ch.group] = [];
+    grouped[ch.group].push(ch);
+  });
+  
+  if (Object.keys(grouped).length === 0) {
+    channelList.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><div class="empty-title">No channels found</div></div>`;
+    return;
+  }
+  
+  Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).forEach(([group, chs]) => {
+    if (state.activeGroup === 'All') {
+      const label = document.createElement('div');
+      label.className = 'ch-group-label';
+      label.textContent = group;
+      channelList.appendChild(label);
+    }
+    chs.forEach(ch => {
+      const globalIdx = state.channels.indexOf(ch);
+      const item = document.createElement('div');
+      item.className = 'ch-item' + (globalIdx === state.currentIdx ? ' active' : '');
+      item.dataset.idx = globalIdx;
+      const logoHtml = ch.logo ?
+        `<div class="ch-logo"><img src="${escAttr(ch.logo)}" alt="" onerror="this.parentNode.textContent='${escHtml(ch.name.substring(0,3))}'"></div>` :
+        `<div class="ch-logo">${escHtml(ch.name.substring(0,3))}</div>`;
+      const eqHtml = globalIdx === state.currentIdx ?
+        `<div class="eq-bars"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>` :
+        '';
+      item.innerHTML = `
+        ${logoHtml}
+        <div class="ch-info">
+          <div class="ch-name">${escHtml(ch.name)}</div>
+          <div class="ch-meta">${escHtml(ch.group)}</div>
+        </div>
+        ${eqHtml}
+      `;
+      item.addEventListener('click', () => playChannel(globalIdx));
+      channelList.appendChild(item);
+    });
+  });
+}
+
+function updateChCount() {
+  chCount.textContent = `${state.channels.length} channels`;
+}
+
+searchInput.addEventListener('input', () => applyFilter());
+
+
+/* ═══════════════════════════════════════════════════════
+   PLAYER — CHANNEL SELECTION + INFO PANEL
+   ═══════════════════════════════════════════════════════ */
+function playChannel(idx) {
+  const ch = state.channels[idx];
+  if (!ch) return;
+  
+  saveLastChannel(state.activePlaylist, idx);
+  state.currentIdx = idx;
+  state.retryCount = 0;
+  errorState.classList.remove('show');
+  renderChannelList();
+  
+  if (window.innerWidth <= 768) sidebar.classList.remove('mobile-open');
+  
+  emptyState.style.display = 'none';
+  channelDetail.style.display = 'block';
+  npName.textContent = ch.name;
+  detailName.textContent = ch.name;
+  
+  const npLogo = $('npLogo');
+  if (ch.logo) { npLogo.src = ch.logo;
+    npLogo.classList.add('show'); }
+  else { npLogo.src = '';
+    npLogo.classList.remove('show'); }
+  
+  detailLogo.innerHTML = ch.logo ?
+    `<img src="${escAttr(ch.logo)}" alt="" onerror="this.parentNode.textContent='${escHtml(ch.name.substring(0,3))}'"><span style="display:none">${escHtml(ch.name.substring(0,3))}</span>` :
+    escHtml(ch.name.substring(0, 3));
+  
+  detailMeta.innerHTML = [
+    ch.group && `<span class="meta-tag">${escHtml(ch.group)}</span>`,
+    ch.tvgId && `<span class="meta-tag blue">${escHtml(ch.tvgId)}</span>`,
+    Object.keys(ch.compiledHeaders || {}).length && `<span class="meta-tag">🔐 Headers</span>`,
+  ].filter(Boolean).join('');
+  
+  loadStream(ch);
+}
+
+
+/* ═══════════════════════════════════════════════════════
+   PLAYER — STREAM LOADING (HLS / NATIVE / DIRECT)
+   ═══════════════════════════════════════════════════════ */
+function loadStream(ch) {
+  if (state.hls) { state.hls.destroy();
+    state.hls = null; }
+  videoEl.src = '';
+  setStatus('Connecting…', 'yellow');
+  qualityBadge.textContent = 'HLS';
+  
+  const url = ch.url;
+  const hdrs = ch.compiledHeaders || {};
+  const isHLS = url.includes('.m3u8') || url.includes('playlist') || url.includes('hls');
+  
+  if (Hls.isSupported() && (isHLS || !videoEl.canPlayType('application/vnd.apple.mpegurl'))) {
+    const hls = new Hls({
+      xhrSetup: (xhr) => {
+        if (hdrs['User-Agent']) xhr.setRequestHeader('User-Agent', hdrs['User-Agent']);
+        if (hdrs['Referer']) xhr.setRequestHeader('Referer', hdrs['Referer']);
+      },
+      enableWorker: true,
+      lowLatencyMode: true,
+      backBufferLength: 30,
+      maxBufferLength: 60,
+      maxMaxBufferLength: 120,
+      capLevelToPlayerSize: true,
+      startLevel: -1,
+    });
+    state.hls = hls;
+    hls.loadSource(url);
+    hls.attachMedia(videoEl);
+    
+    hls.on(Hls.Events.MANIFEST_PARSED, (e, data) => {
+      qualityBadge.textContent = data.levels.length > 1 ? `AUTO · ${data.levels.length}Q` : 'HLS';
+      videoEl.play().catch(() => {});
+      setStatus('Playing', 'green');
+      state.isPlaying = true;
+      updatePlayPauseIcon();
+    });
+    
+    hls.on(Hls.Events.LEVEL_SWITCHED, (e, data) => {
+      const lv = hls.levels[data.level];
+      if (lv) qualityBadge.textContent = lv.height ? `${lv.height}p` : 'HLS';
+    });
+    
+    hls.on(Hls.Events.ERROR, (e, data) => {
+      console.error('HLS error:', data.type, data.details, data.fatal);
+      if (!data.fatal) return;
+      if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        if (state.retryCount < state.MAX_RETRY) {
+          state.retryCount++;
+          setStatus(`Reconnecting (${state.retryCount}/${state.MAX_RETRY})…`, 'yellow');
+          setTimeout(() => hls.startLoad(), 2000);
+        } else {
+          showError('Network error. Stream may be offline or CORS-blocked.');
+        }
+      } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+        setStatus('Recovering media…', 'yellow');
+        hls.recoverMediaError();
+      } else {
+        showError('Fatal stream error. Try another channel.');
+      }
+    });
+    
+  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    // Native HLS (Safari)
+    videoEl.src = url;
+    videoEl.play().catch(() => {});
+    qualityBadge.textContent = 'Native HLS';
+    setStatus('Playing', 'green');
+    state.isPlaying = true;
+    updatePlayPauseIcon();
+  } else {
+    // Direct (MP4 etc.)
+    videoEl.src = url;
+    videoEl.play().catch(() => {});
+    qualityBadge.textContent = 'Direct';
+    setStatus('Playing', 'green');
+    state.isPlaying = true;
+    updatePlayPauseIcon();
+  }
+}
+
+function showError(msg) {
+  setStatus('Error', 'red');
+  errorState.classList.add('show');
+  $('errorMsg').textContent = msg;
+  state.isPlaying = false;
+  updatePlayPauseIcon();
+}
+
+function setStatus(text, color) {
+  connStatus.textContent = text;
+  connDot.style.background = color === 'green' ? 'var(--grn)' : color === 'red' ? 'var(--red)' : color === 'yellow' ? 'var(--ylw)' : 'var(--t3)';
+  connDot.style.boxShadow = color === 'green' ? '0 0 6px var(--grn)' : 'none';
+  const liveBadge = document.querySelector('.live-badge');
+  if (color === 'green' && text === 'Playing') liveBadge.classList.add('visible');
+  else liveBadge.classList.remove('visible');
+}
+
+$('retryBtn').addEventListener('click', () => {
+  if (state.currentIdx !== -1) {
+    state.retryCount = 0;
+    errorState.classList.remove('show');
+    loadStream(state.channels[state.currentIdx]);
+  }
+});
+
+
+/* ═══════════════════════════════════════════════════════
+   PLAYER — VIDEO ELEMENT EVENTS
+   ═══════════════════════════════════════════════════════ */
+videoEl.addEventListener('playing', () => {
+  state.isPlaying = true;
+  updatePlayPauseIcon();
+  setStatus('Playing', 'green');
+  $('bufferSpinner').style.display = 'none';
+});
+videoEl.addEventListener('waiting', () => {
+  setStatus('Buffering…', 'yellow');
+  $('bufferSpinner').style.display = 'block';
+});
+videoEl.addEventListener('canplay', () => { $('bufferSpinner').style.display = 'none'; });
+videoEl.addEventListener('pause', () => { state.isPlaying = false;
+  updatePlayPauseIcon();
+  setStatus('Paused', 'yellow'); });
+videoEl.addEventListener('error', () => {
+  if (state.currentIdx === -1) return;
+  if (state.retryCount < state.MAX_RETRY) {
+    state.retryCount++;
+    setStatus(`Retry ${state.retryCount}/${state.MAX_RETRY}…`, 'yellow');
+    setTimeout(() => loadStream(state.channels[state.currentIdx]), 3000);
+  } else {
+    showError('Unable to load stream. Check the URL or try another channel.');
+  }
+});
+
+videoEl.addEventListener('timeupdate', () => {
+  if (!videoEl.duration || isNaN(videoEl.duration)) {
+    timeDisplay.textContent = 'LIVE';
+    progressFill.style.width = '100%';
+    return;
+  }
+  const pct = (videoEl.currentTime / videoEl.duration) * 100;
+  progressFill.style.width = pct + '%';
+  timeDisplay.textContent = fmtTime(videoEl.currentTime) + ' / ' + fmtTime(videoEl.duration);
+});
+
+$('progressWrap').addEventListener('click', e => {
+  if (!videoEl.duration || isNaN(videoEl.duration)) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  videoEl.currentTime = ((e.clientX - rect.left) / rect.width) * videoEl.duration;
+});
+
+/* ═══════════════════════════════════════════════════════
+   BOOT
+   ═══════════════════════════════════════════════════════ */
+init();
