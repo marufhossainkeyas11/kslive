@@ -558,8 +558,34 @@ video {
 }
 .vol-slider {
   width: 80px;
-  accent-color: var(--blue3);
   cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 5px;
+  border-radius: 4px;
+  outline: none;
+}
+.vol-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--blue3);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+.vol-slider::-moz-range-thumb {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--blue3);
+  border: none;
+  cursor: pointer;
+}
+.vol-slider-desktop {
+  min-width: 100px;
+  max-width: 190px;
+}
+.more-popup-row .vol-slider {
+  width: 90px;
 }
 
 .time-display {
