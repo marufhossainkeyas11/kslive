@@ -1,3 +1,10 @@
 #EXTM3U
-#EXTINF:-1 tvg-id="tsports live" tvg-name="T-sports" tvg-logo="https://raw.githubusercontent.com/subirkumarpaul/Logo/refs/heads/main/T%20Sports.png" group-title="IPTV",T-Sports
-https://bd-mc-flive.fancode.com/mumbai/142967_english_hls_3ca0c433b823669_1ta-di_h264/1080p.m3u8?hdntl=Expires=1781497145~_GO=Generated~acl=/mumbai/142967_english_hls_3ca0c433b823669_1ta-di_h264/*~Signature=ATZ0w6fTC_R-5gVfyyfCYaPEodfRLcQnNuy5CN65w8SLEnjDVV9HNNxBV_jAEewDLX4LucKeYI5BTqVed9G8Jg5pGaQL
+
+#EXTINF:-1 tvg-logo="http://209.97.175.236/img/TSPORTS.png" group-title="TV",TSPORTS HD
+http://198.195.239.50:8095/tsports/index.m3u8
+
+#EXTINF:-1 tvg-logo="http://209.97.175.236/img/SOMOY_TV.png" group-title="TV",SOMOY TV
+https://live.thebosstv.com:30443/dwlive/Somoy-TV/chunks.m3u8
+
+#EXTINF:-1 tvg-logo="http://209.97.175.236/img/SONY_AATH.png" group-title="TV",SONY AATH
+http://198.195.239.50:8095/sonyAath/index.m3u8
