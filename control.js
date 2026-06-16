@@ -36,40 +36,147 @@ $('nextBtn').addEventListener('click', () => navigateChannel(1));
 
 
 /* ═══════════════════════════════════════════════════════
-   CONTROLS — VOLUME
+   CONTROLS — VOLUME + BOOST (Web Audio API)
    ═══════════════════════════════════════════════════════ */
 let lastVol = 1;
 
-function setVolume(vol, muted) {
+// Web Audio setup
+let audioCtx = null;
+let gainNode = null;
+let sourceConnected = false;
+
+function ensureAudioCtx() {
+  if (audioCtx) return;
+  audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+  gainNode = audioCtx.createGain();
+  gainNode.connect(audioCtx.destination);
+}
+
+function connectSource() {
+  if (sourceConnected || !audioCtx) return;
+  try {
+    const src = audioCtx.createMediaElementSource(videoEl);
+    src.connect(gainNode);
+    sourceConnected = true;
+  } catch (e) {}
+}
+
+// vol: 0–1 for video element (0%–100%)
+// boost: 1.0–1.3 from GainNode (100%–130%)
+// slider range: 0–130 (integer steps)
+
+function sliderToGain(sliderVal) {
+  if (sliderVal <= 100) {
+    return { vol: sliderVal / 100, gain: 1 };
+  } else {
+    return { vol: 1, gain: 1 + ((sliderVal - 100)/10 ) };
+  }
+}
+
+function updateSliderTrack(slider, val) {
+  // val: 0–130
+  const boostStart = 100 / 130 * 100; // ~76.9%
+  const pct = (val / 130) * 100;
+  
+  if (val <= 100) {
+    // all blue
+    slider.style.background = `linear-gradient(to right,
+      var(--blue3) 0%,
+      var(--blue3) ${pct}%,
+      rgba(255,255,255,0.18) ${pct}%,
+      rgba(255,255,255,0.18) 100%)`;
+  } else {
+    // blue up to 76.9%, then red
+    const redPct = pct;
+    slider.style.background = `linear-gradient(to right,
+      var(--blue3) 0%,
+      var(--blue3) ${boostStart}%,
+      var(--red2) ${boostStart}%,
+      var(--red2) ${redPct}%,
+      rgba(255,255,255,0.18) ${redPct}%,
+      rgba(255,255,255,0.18) 100%)`;
+  }
+}
+
+function setVolume(vol, muted, sliderVal) {
+  // vol: 0–1 for videoEl
+  // sliderVal: 0–130 (optional, for sync)
   vol = Math.max(0, Math.min(1, vol));
   videoEl.volume = vol;
   videoEl.muted = muted;
   state.isMuted = muted;
   
-  const displayVal = muted ? 0 : vol;
+  const sv = sliderVal !== undefined ? sliderVal : Math.round(vol * 100);
+  const displayVal = muted ? 0 : sv;
+  
   $('volSlider').value = displayVal;
   $('volSliderMobile').value = displayVal;
+  updateSliderTrack($('volSlider'), displayVal);
+  updateSliderTrack($('volSliderMobile'), displayVal);
+  
+  // GainNode
+  if (gainNode) {
+    const g = muted ? 0 : (sv > 100 ? sv / 100 : 1);
+    gainNode.gain.value = g;
+  }
   
   const MUTED_D = 'M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06m7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0';
   const UNMUTED_D = 'M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12zm3.025 4a4.5 4.5 0 0 1-1.318 3.182L10 10.475A3.5 3.5 0 0 0 11.025 8 3.5 3.5 0 0 0 10 5.525l.707-.707A4.5 4.5 0 0 1 12.025 8';
   $('volIcon').setAttribute('d', (muted || vol === 0) ? MUTED_D : UNMUTED_D);
+  if ($('volIcon2')) $('volIcon2').setAttribute('d', (muted || vol === 0) ? MUTED_D : UNMUTED_D);
 }
 
 $('muteBtn').addEventListener('click', () => {
-  if (state.isMuted || videoEl.volume === 0) setVolume(lastVol || 1, false);
-  else { lastVol = videoEl.volume;
-    setVolume(videoEl.volume, true); }
+  ensureAudioCtx();
+  connectSource();
+  if (state.isMuted || videoEl.volume === 0) {
+    setVolume(lastVol > 1 ? 1 : lastVol, false, Math.round(lastVol <= 1 ? lastVol * 100 : lastVol * 100));
+  } else {
+    lastVol = parseFloat($('volSlider').value) / 100;
+    setVolume(videoEl.volume, true, parseFloat($('volSlider').value));
+  }
 });
-$('volSlider').addEventListener('input', e => {
-  const v = parseFloat(e.target.value);
-  if (v > 0) lastVol = v;
-  setVolume(v, v === 0);
-});
-$('volSliderMobile').addEventListener('input', e => {
-  const v = parseFloat(e.target.value);
-  if (v > 0) lastVol = v;
-  setVolume(v, v === 0);
-});
+
+function handleVolSlider(e) {
+  ensureAudioCtx();
+  connectSource();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  
+  const sv = parseFloat(e.target.value); // 0–130
+  const { vol, gain } = sliderToGain(sv);
+  
+  if (sv > 0) lastVol = sv / 100;
+  videoEl.volume = vol;
+  videoEl.muted = false;
+  state.isMuted = false;
+  
+  if (gainNode) {
+    gainNode.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.01);
+  }
+  
+  $('volSlider').value = sv;
+  $('volSliderMobile').value = sv;
+  updateSliderTrack($('volSlider'), sv);
+  updateSliderTrack($('volSliderMobile'), sv);
+  
+  const MUTED_D = 'M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06m7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0';
+  const UNMUTED_D = 'M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12zm3.025 4a4.5 4.5 0 0 1-1.318 3.182L10 10.475A3.5 3.5 0 0 0 11.025 8 3.5 3.5 0 0 0 10 5.525l.707-.707A4.5 4.5 0 0 1 12.025 8';
+  $('volIcon').setAttribute('d', sv === 0 ? MUTED_D : UNMUTED_D);
+  if ($('volIcon2')) $('volIcon2').setAttribute('d', sv === 0 ? MUTED_D : UNMUTED_D);
+}
+
+$('volSlider').addEventListener('input', handleVolSlider);
+$('volSliderMobile').addEventListener('input', handleVolSlider);
+
+// AudioContext resume on first play
+videoEl.addEventListener('play', () => {
+  if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  ensureAudioCtx();
+  connectSource();
+}, { once: false });
+// Initial track render
+updateSliderTrack($('volSlider'), 100);
+updateSliderTrack($('volSliderMobile'), 100);
 
 
 /* ═══════════════════════════════════════════════════════
