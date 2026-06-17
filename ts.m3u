@@ -3,8 +3,13 @@
 #EXTINF:-1 tvg-logo="http://209.97.175.236/img/TSPORTS.png" group-title="TV",TSPORTS HD
 http://198.195.239.50:8095/tsports/index.m3u8
 
+#EXTINF:-1 tvg-logo="http://209.97.175.236/img/TSPORTS.png" group-title="TV",TSPORTS HD 2
+http://198.195.239.50:8095/tsports/tracks-v1a1/mono.m3u8
+
 #EXTINF:-1 tvg-logo="http://209.97.175.236/img/SOMOY_TV.png" group-title="TV",SOMOY TV
 https://live.thebosstv.com:30443/dwlive/Somoy-TV/chunks.m3u8
 
 #EXTINF:-1 tvg-logo="http://209.97.175.236/img/SONY_AATH.png" group-title="TV",SONY AATH
 http://198.195.239.50:8095/sonyAath/index.m3u8
+
+
