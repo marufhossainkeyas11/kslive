@@ -569,17 +569,18 @@ video {
   -webkit-appearance: none;
   width: 14px; height: 14px;
   border-radius: 50%;
-  background: var(--blue3);
+  background: var(--thumb-color, var(--blue3)); /* ← change */
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 .vol-slider::-moz-range-thumb {
   width: 14px; height: 14px;
   border-radius: 50%;
-  background: var(--blue3);
+  background: var(--thumb-color, var(--blue3)); /* ← change */
   border: none;
   cursor: pointer;
 }
+
 .vol-slider-desktop {
   min-width: 100px;
   max-width: 190px;
