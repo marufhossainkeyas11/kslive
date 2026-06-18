@@ -74,19 +74,17 @@ function sliderToGain(sliderVal) {
 }
 
 function updateSliderTrack(slider, val) {
-  // val: 0–130
-  const boostStart = 100 / 130 * 100; // ~76.9%
+  const boostStart = 100 / 130 * 100;
   const pct = (val / 130) * 100;
   
   if (val <= 100) {
-    // all blue
     slider.style.background = `linear-gradient(to right,
       var(--blue3) 0%,
       var(--blue3) ${pct}%,
       rgba(255,255,255,0.18) ${pct}%,
       rgba(255,255,255,0.18) 100%)`;
+    slider.style.setProperty('--thumb-color', 'var(--blue3)'); // ← add
   } else {
-    // blue up to 76.9%, then red
     const redPct = pct;
     slider.style.background = `linear-gradient(to right,
       var(--blue3) 0%,
@@ -95,8 +93,10 @@ function updateSliderTrack(slider, val) {
       var(--red2) ${redPct}%,
       rgba(255,255,255,0.18) ${redPct}%,
       rgba(255,255,255,0.18) 100%)`;
+    slider.style.setProperty('--thumb-color', 'var(--red2)'); // ← add
   }
 }
+
 
 function setVolume(vol, muted, sliderVal) {
   // vol: 0–1 for videoEl
