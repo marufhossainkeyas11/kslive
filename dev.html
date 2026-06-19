@@ -389,23 +389,25 @@ function parseM3U(text) {
 ═══════════════════════════════════════════════ */
 function resolveUrl(ch) {
   const workerUrl = $('workerUrl').value.trim().replace(/\/$/, '');
+  if (!workerUrl) return ch.url;
 
-  if (ch.cookie && workerUrl) {
+  if (ch.cookie) {
+    // bldcmprod cookie CDN → path mode
     try {
       const u = new URL(ch.url);
-      // URLSearchParams exactly একবার encode করে
       const params = new URLSearchParams();
-      params.set('path', u.pathname);
+      params.set('path', u.pathname + u.search);
       params.set('cookie', ch.cookie);
       if (ch.ua) params.set('ua', ch.ua);
       return `${workerUrl}?${params.toString()}`;
-    } catch {
-      return ch.url;
-    }
+    } catch { return ch.url; }
+  } else {
+    // prod-cdn01 token-in-URL → direct mode (CORS fix)
+    const params = new URLSearchParams();
+    params.set('direct', ch.url);
+    if (ch.ua) params.set('ua', ch.ua);
+    return `${workerUrl}?${params.toString()}`;
   }
-
-  // Token-in-URL streams (prod-cdn01) → সরাসরি চলে
-  return ch.url;
 }
 
 /* ═══════════════════════════════════════════════
