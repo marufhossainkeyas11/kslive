@@ -1,69 +1,874 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sri Lanka A vs India A - Live</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>KS Player</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; font-family: sans-serif; }
-  h2 { color: #fff; margin-bottom: 12px; font-size: 15px; text-align: center; padding: 0 10px; }
-  video { width: 100%; max-width: 900px; background: #000; border-radius: 8px; }
-  #status { color: #aaa; margin-top: 10px; font-size: 13px; }
+/* ── CSS VARIABLES ── */
+:root {
+  --bg1:#0a0a0f; --bg2:#111118; --bg3:#1a1a25;
+  --bdr:rgba(255,255,255,0.07);
+  --text:#e8e8f0; --t2:#9090a8; --t3:#5a5a72;
+  --blue3:#1565c0; --blue4:#1976d2; --blueg:#0d47a1;
+  --red2:#e53935; --acc:#2979ff;
+  --m:'SF Mono','Fira Mono',monospace;
+}
+[data-theme="light"] {
+  --bg1:#f0f0f8; --bg2:#ffffff; --bg3:#e8e8f2;
+  --bdr:rgba(0,0,0,0.09);
+  --text:#1a1a2e; --t2:#5a5a72; --t3:#9090a8;
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg1);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--bg2);border-bottom:1px solid var(--bdr);flex-shrink:0;z-index:10}
+.logo{font-size:15px;font-weight:700;letter-spacing:2px;color:var(--acc);font-family:var(--m)}
+.topbar-right{display:flex;align-items:center;gap:8px;margin-left:auto}
+.tb-btn{background:var(--bg3);border:1px solid var(--bdr);color:var(--t2);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;transition:all .15s}
+.tb-btn:hover{color:var(--text);border-color:var(--acc)}
+.worker-input{background:var(--bg3);border:1px solid var(--bdr);color:var(--text);padding:5px 10px;border-radius:6px;font-size:12px;width:220px;outline:none}
+.worker-input:focus{border-color:var(--acc)}
+.worker-input::placeholder{color:var(--t3)}
+
+/* ── MAIN LAYOUT ── */
+.main{display:flex;flex:1;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{width:280px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--bdr);display:flex;flex-direction:column;transition:width .25s;overflow:hidden}
+.sidebar.collapsed{width:0}
+.sb-head{padding:10px 12px;border-bottom:1px solid var(--bdr);display:flex;flex-direction:column;gap:8px;flex-shrink:0}
+.search-wrap{position:relative}
+.search-wrap svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:14px;height:14px;fill:var(--t3)}
+.sb-search{width:100%;background:var(--bg3);border:1px solid var(--bdr);color:var(--text);padding:7px 10px 7px 30px;border-radius:7px;font-size:13px;outline:none}
+.sb-search:focus{border-color:var(--acc)}
+.groups{display:flex;gap:6px;flex-wrap:wrap}
+.group-chip{background:var(--bg3);border:1px solid var(--bdr);color:var(--t2);padding:3px 9px;border-radius:20px;font-size:11px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.group-chip.active{background:var(--acc);border-color:var(--acc);color:#fff}
+.ch-list{flex:1;overflow-y:auto;padding:6px 0}
+.ch-list::-webkit-scrollbar{width:4px}
+.ch-list::-webkit-scrollbar-track{background:transparent}
+.ch-list::-webkit-scrollbar-thumb{background:var(--t3);border-radius:4px}
+.ch-item{display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;transition:background .12s;border-left:3px solid transparent}
+.ch-item:hover{background:var(--bg3)}
+.ch-item.active{background:rgba(41,121,255,0.1);border-left-color:var(--acc)}
+.ch-logo{width:36px;height:36px;border-radius:7px;object-fit:cover;background:var(--bg3);flex-shrink:0}
+.ch-logo-placeholder{width:36px;height:36px;border-radius:7px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--t2);flex-shrink:0;text-transform:uppercase}
+.ch-info{min-width:0}
+.ch-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ch-group{font-size:11px;color:var(--t3);font-family:var(--m)}
+
+/* ── VIDEO AREA ── */
+.video-area{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#000}
+.video-wrap{position:relative;background:#000;flex:1}
+video{width:100%;height:100%;object-fit:contain;display:block}
+
+/* ── CONTROLS ── */
+.controls-visible .ctrl-overlay{opacity:1;pointer-events:all}
+.ctrl-overlay{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .2s;background:linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.3) 40%,transparent 70%)}
+.ctrl-bar{display:flex;align-items:center;gap:6px;padding:10px 14px 14px}
+.ctrl-btn{background:none;border:none;color:#fff;cursor:pointer;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:8px;transition:background .15s;flex-shrink:0}
+.ctrl-btn:hover{background:rgba(255,255,255,.15)}
+.ctrl-btn svg{width:18px;height:18px;fill:currentColor}
+.ctrl-btn.active{color:var(--acc)}
+.spacer{flex:1}
+.vol-wrap{display:flex;align-items:center;gap:8px}
+input[type=range].vol-slider{-webkit-appearance:none;width:90px;height:4px;border-radius:2px;outline:none;cursor:pointer;--thumb-color:var(--blue3)}
+input[type=range].vol-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--thumb-color);cursor:pointer;transition:transform .1s}
+input[type=range].vol-slider::-webkit-slider-thumb:hover{transform:scale(1.3)}
+
+/* ── NOW PLAYING BAR ── */
+.now-bar{background:var(--bg2);border-top:1px solid var(--bdr);padding:8px 14px;display:flex;align-items:center;gap:10px;flex-shrink:0;min-height:48px}
+.live-badge{background:#e53935;color:#fff;font-size:10px;font-weight:700;letter-spacing:1px;padding:2px 6px;border-radius:3px;font-family:var(--m);flex-shrink:0;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.6}}
+.now-ch-logo{width:30px;height:30px;border-radius:6px;object-fit:cover;background:var(--bg3)}
+.now-ch-name{font-size:13px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.now-ch-group{font-size:11px;color:var(--t3);font-family:var(--m)}
+.now-status{font-size:11px;color:var(--t3);font-family:var(--m);margin-left:auto;flex-shrink:0}
+
+/* ── BIG PLAY ICON ── */
+.big-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s}
+.big-play.show{opacity:1;animation:bigPop .7s ease forwards}
+@keyframes bigPop{0%{opacity:1;transform:scale(.8)}50%{opacity:1;transform:scale(1.1)}100%{opacity:0;transform:scale(1)}}
+.big-play-circle{width:64px;height:64px;border-radius:50%;background:rgba(0,0,0,.6);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center}
+.big-play-circle svg{width:28px;height:28px;fill:#fff}
+
+/* ── SPEED INDICATOR ── */
+.speed-indicator{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.7);color:#fff;padding:8px 16px;border-radius:8px;font-size:14px;font-weight:700;font-family:var(--m);pointer-events:none;opacity:0;transition:opacity .2s}
+.speed-indicator.show{opacity:1}
+
+/* ── LOAD OVERLAY ── */
+.load-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.7);gap:14px;transition:opacity .3s;z-index:5}
+.load-overlay.hidden{opacity:0;pointer-events:none}
+.spinner{width:40px;height:40px;border:3px solid rgba(255,255,255,.15);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-text{color:var(--t2);font-size:13px}
+
+/* ── EMPTY STATE ── */
+.empty-state{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--t2)}
+.empty-state svg{width:48px;height:48px;fill:var(--t3);opacity:.5}
+.empty-state p{font-size:14px}
+
+/* ── M3U MODAL ── */
+.modal-bd{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal-bd.hidden{display:none}
+.modal{background:var(--bg2);border:1px solid var(--bdr);border-radius:14px;padding:24px;width:min(480px,92vw);display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 64px rgba(0,0,0,.5)}
+.modal h2{font-size:16px;font-weight:700}
+.modal p{font-size:13px;color:var(--t2);line-height:1.5}
+.modal textarea{background:var(--bg3);border:1px solid var(--bdr);color:var(--text);padding:12px;border-radius:8px;font-size:12px;font-family:var(--m);resize:vertical;height:140px;outline:none;width:100%}
+.modal textarea:focus{border-color:var(--acc)}
+.modal-row{display:flex;gap:10px;flex-wrap:wrap}
+.modal-btn{flex:1;padding:10px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;min-width:100px}
+.modal-btn.primary{background:var(--acc);color:#fff}
+.modal-btn.primary:hover{background:#1565c0}
+.modal-btn.secondary{background:var(--bg3);color:var(--text);border:1px solid var(--bdr)}
+.modal-btn.secondary:hover{border-color:var(--acc)}
+.url-input{background:var(--bg3);border:1px solid var(--bdr);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;outline:none;width:100%}
+.url-input:focus{border-color:var(--acc)}
+.divider{text-align:center;color:var(--t3);font-size:12px;position:relative}
+.divider::before,.divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--bdr)}
+.divider::before{left:0} .divider::after{right:0}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#323248;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+
+/* ── SIDEBAR TOGGLE BTN ── */
+.sb-toggle{background:none;border:none;color:var(--t2);cursor:pointer;padding:5px;display:flex;align-items:center}
+.sb-toggle svg{width:20px;height:20px;fill:currentColor}
+.sb-toggle:hover{color:var(--text)}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:50;width:280px;transform:translateX(-100%);transition:transform .25s}
+  .sidebar.mobile-open{transform:translateX(0)}
+  .sidebar.collapsed{transform:translateX(-100%)}
+  .worker-input{display:none}
+  .topbar-right .tb-btn.settings-btn{display:none}
+  input[type=range].vol-slider{width:70px}
+}
+@media(max-width:450px){
+  .vol-wrap .vol-slider{display:none}
+  .ctrl-btn{width:34px;height:34px}
+}
+
+/* ── MORE POPUP ── */
+.more-popup{position:absolute;bottom:56px;right:8px;background:var(--bg2);border:1px solid var(--bdr);border-radius:10px;padding:6px 0;min-width:160px;box-shadow:0 8px 32px rgba(0,0,0,.4);display:none;z-index:20}
+.more-popup.open{display:block}
+.more-row{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:13px;transition:background .12s}
+.more-row:hover{background:var(--bg3)}
+.more-row svg{width:16px;height:16px;fill:var(--t2);flex-shrink:0}
 </style>
 </head>
 <body>
 
-<h2>🏏 Tri Nation A Series – Sri Lanka A vs India A (LIVE)</h2>
-<video id="v" controls></video>
-<p id="status">Initializing...</p>
+<!-- ═══ TOPBAR ═══ -->
+<div class="topbar">
+  <button class="sb-toggle" id="sidebarToggle" title="Toggle Sidebar">
+    <svg viewBox="0 0 16 16"><path d="M2.5 12a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11zm0-4a.5.5 0 0 1 0-1h11a.5.5 0 0 1 0 1h-11z"/></svg>
+  </button>
+  <span class="logo">KS PLAYER</span>
+  <div class="topbar-right">
+    <input class="worker-input" id="workerUrl" placeholder="Cloudflare Worker URL (bldcmprod only)" 
+           value="https://nameless-mouse-1795.marufhossainkeyas.workers.dev" title="Worker URL for Toffee CDN proxy">
+    <button class="tb-btn" id="loadM3uBtn">📂 M3U লোড</button>
+    <button class="tb-btn" id="themeToggle">🌙</button>
+  </div>
+</div>
 
-<!-- dash.js jsdelivr CDN থেকে নেওয়া -->
-<script src="https://cdn.jsdelivr.net/npm/dashjs@4.7.4/dist/dash.all.min.js"></script>
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="search-wrap">
+        <svg viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398l3.85 3.85a1 1 0 0 0 1.415-1.415l-3.868-3.833zm-5.442 1.656a5.5 5.5 0 1 1 0-11 5.5 5.5 0 0 1 0 11z"/></svg>
+        <input class="sb-search" id="sbSearch" placeholder="চ্যানেল খুঁজুন...">
+      </div>
+      <div class="groups" id="groupsWrap"></div>
+    </div>
+    <div class="ch-list" id="chList"></div>
+  </div>
+
+  <!-- VIDEO AREA -->
+  <div class="video-area">
+    <div class="video-wrap" id="videoWrap">
+      <video id="video" playsinline></video>
+
+      <!-- Loading -->
+      <div class="load-overlay hidden" id="loadOverlay">
+        <div class="spinner"></div>
+        <div class="load-text" id="loadText">লোড হচ্ছে...</div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" id="emptyState">
+        <svg viewBox="0 0 16 16"><path d="M6.79 5.093A.5.5 0 0 0 6 5.5v5a.5.5 0 0 0 .79.407l3.5-2.5a.5.5 0 0 0 0-.814l-3.5-2.5z"/><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm15 0a1 1 0 0 0-1-1H2a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/></svg>
+        <p>M3U লোড করো, তারপর চ্যানেল সিলেক্ট করো</p>
+        <button class="tb-btn" style="margin-top:8px" id="emptyLoadBtn">📂 M3U লোড</button>
+      </div>
+
+      <!-- Big play indicator -->
+      <div class="big-play" id="bigPlay">
+        <div class="big-play-circle">
+          <svg id="bigPlayIcon" viewBox="0 0 16 16">
+            <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Speed indicator -->
+      <div class="speed-indicator" id="speedIndicator">1.5×</div>
+
+      <!-- Controls overlay -->
+      <div class="ctrl-overlay" id="ctrlOverlay">
+        <div class="ctrl-bar">
+          <!-- Prev -->
+          <button class="ctrl-btn" id="prevBtn" title="আগের চ্যানেল">
+            <svg viewBox="0 0 16 16"><path d="M.5 3.5A.5.5 0 0 1 1 4v3.248l6.267-3.636c.52-.302 1.233.043 1.233.696v2.94l6.267-3.636c.52-.302 1.233.043 1.233.696v7.384c0 .653-.713.998-1.233.696L8.5 8.752v2.94c0 .653-.713.998-1.233.696L1 8.752V12a.5.5 0 0 1-1 0V4a.5.5 0 0 1 .5-.5z"/></svg>
+          </button>
+          <!-- Play/Pause -->
+          <button class="ctrl-btn" id="playPauseBtn" title="Play/Pause">
+            <svg viewBox="0 0 16 16"><path id="ppIcon" d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/></svg>
+          </button>
+          <!-- Next -->
+          <button class="ctrl-btn" id="nextBtn" title="পরের চ্যানেল">
+            <svg viewBox="0 0 16 16"><path d="M15.5 3.5a.5.5 0 0 1 .5.5v8a.5.5 0 0 1-1 0V8.752l-6.267 3.636c-.52.302-1.233-.043-1.233-.696v-2.94l-6.267 3.636C.713 12.69 0 12.345 0 11.692V4.308c0-.653.713-.998 1.233-.696L7.5 7.248v-2.94c0-.653.713-.998 1.233-.696L15 7.248V4a.5.5 0 0 1 .5-.5z"/></svg>
+          </button>
+
+          <div class="spacer"></div>
+
+          <!-- Volume -->
+          <div class="vol-wrap">
+            <button class="ctrl-btn" id="muteBtn" title="Mute">
+              <svg viewBox="0 0 16 16"><path id="volIcon" d="M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12zm3.025 4a4.5 4.5 0 0 1-1.318 3.182L10 10.475A3.5 3.5 0 0 0 11.025 8 3.5 3.5 0 0 0 10 5.525l.707-.707A4.5 4.5 0 0 1 12.025 8"/></svg>
+            </button>
+            <input type="range" class="vol-slider" id="volSlider" min="0" max="130" value="100">
+          </div>
+
+          <!-- PiP -->
+          <button class="ctrl-btn" id="pipBtn" title="Picture in Picture" style="display:none">
+            <svg viewBox="0 0 16 16"><path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5v-9zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5h-13zm7.5 5.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0V9.707l-2.146 2.147a.5.5 0 0 1-.708-.708L11.293 9H9.5a.5.5 0 0 1-.5-.5z"/></svg>
+          </button>
+
+          <!-- Fullscreen -->
+          <button class="ctrl-btn" id="fullscreenBtn" title="Fullscreen">
+            <svg viewBox="0 0 16 16"><path d="M1.5 1h4a.5.5 0 0 1 0 1h-4a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 1zm9 0h4A1.5 1.5 0 0 1 16 2.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1 0-1zM1 10.5a.5.5 0 0 1 .5-.5h.5v.5a.5.5 0 0 0 .5.5H3v.5a.5.5 0 0 1-.5.5h-1A1.5 1.5 0 0 1 0 10.5v-1zM14.5 10a.5.5 0 0 1 .5.5v1a1.5 1.5 0 0 1-1.5 1.5h-1a.5.5 0 0 1 0-1H13a.5.5 0 0 0 .5-.5V10a.5.5 0 0 1 .5-.5zM0 14.5V13a.5.5 0 0 1 1 0v1.5a.5.5 0 0 0 .5.5H3a.5.5 0 0 1 0 1H1.5A1.5 1.5 0 0 1 0 14.5zm15 0a1.5 1.5 0 0 1-1.5 1.5H12a.5.5 0 0 1 0-1h1.5a.5.5 0 0 0 .5-.5V13a.5.5 0 0 1 1 0v1.5z"/></svg>
+          </button>
+
+          <!-- More (mobile) -->
+          <button class="ctrl-btn" id="moreBtn" style="display:none">
+            <svg viewBox="0 0 16 16"><path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/></svg>
+          </button>
+        </div>
+
+        <!-- More popup -->
+        <div class="more-popup" id="morePopup">
+          <div class="more-row" id="pipRow" style="display:none">
+            <svg viewBox="0 0 16 16"><path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5v-9z"/></svg>
+            Picture in Picture
+          </div>
+          <div class="more-row" id="volRowMobile">
+            <svg viewBox="0 0 16 16"><path id="volIcon2" d="M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12zm3.025 4a4.5 4.5 0 0 1-1.318 3.182L10 10.475A3.5 3.5 0 0 0 11.025 8 3.5 3.5 0 0 0 10 5.525l.707-.707A4.5 4.5 0 0 1 12.025 8"/></svg>
+            <div style="flex:1;display:flex;align-items:center;gap:8px">
+              <span>Volume</span>
+              <input type="range" class="vol-slider" id="volSliderMobile" min="0" max="130" value="100" style="flex:1">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOW PLAYING BAR -->
+    <div class="now-bar" id="nowBar" style="display:none">
+      <span class="live-badge">LIVE</span>
+      <img class="now-ch-logo" id="nowLogo" src="" alt="">
+      <div>
+        <div class="now-ch-name" id="nowName">—</div>
+        <div class="now-ch-group" id="nowGroup">—</div>
+      </div>
+      <div class="now-status" id="nowStatus">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ M3U MODAL ═══ -->
+<div class="modal-bd" id="modalBd">
+  <div class="modal">
+    <h2>📺 M3U প্লেলিস্ট লোড করো</h2>
+    <p>M3U URL দাও অথবা সরাসরি M3U কন্টেন্ট পেস্ট করো। Toffee Live এর জন্য Cloudflare Worker URL দিতে হবে।</p>
+    <input class="url-input" id="m3uUrl" placeholder="https://example.com/playlist.m3u8 বা .m3u">
+    <button class="modal-btn primary" id="loadUrlBtn">🌐 URL থেকে লোড</button>
+    <div class="divider">অথবা</div>
+    <textarea id="m3uPaste" placeholder="#EXTM3U&#10;#EXTINF:-1 group-title=&quot;Sports&quot; tvg-logo=&quot;...&quot;, Channel Name&#10;#EXTHTTP:{&quot;cookie&quot;:&quot;...&quot;}&#10;https://..."></textarea>
+    <div class="modal-row">
+      <button class="modal-btn primary" id="pasteLoadBtn">✅ পেস্ট লোড করো</button>
+      <button class="modal-btn secondary" id="modalClose">বাতিল</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
-  const MPD_URL = "https://a57live-pv-ta-amazon.akamaized.net/iad-nitro/live/clients/dash/enc/ldgnvordfu/out/v1/430b37000b9148379747ac5cfb2ada46/cenc.mpd";
-  const KEY_ID  = "3aa6f9df41c299f659aaee15d0067900";
-  const KEY_VAL = "0434703fb407fb12980f51944271a1f8";
+/* ═══════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════ */
+const state = {
+  channels: [],
+  currentIdx: -1,
+  isPlaying: false,
+  isMuted: false,
+  activeGroup: 'সব',
+  query: '',
+};
 
-  function hexToBase64url(hex) {
-    const bytes = new Uint8Array(hex.match(/.{1,2}/g).map(b => parseInt(b, 16)));
-    return btoa(String.fromCharCode(...bytes))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+const $ = id => document.getElementById(id);
+const videoEl = $('video');
+const videoWrap = $('videoWrap');
+const sidebar = $('sidebar');
+const morePopup = $('morePopup');
+const bigPlay = $('bigPlay');
+
+let hls = null;
+
+/* ═══════════════════════════════════════════════
+   M3U PARSER
+═══════════════════════════════════════════════ */
+function parseM3U(text) {
+  const channels = [];
+  const lines = text.split('\n').map(l => l.trim());
+
+  let current = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith('#EXTINF:')) {
+      current = { name: '', logo: '', group: 'Other', url: '', cookie: '', ua: '' };
+
+      // Name: after last comma
+      const commaIdx = line.lastIndexOf(',');
+      if (commaIdx !== -1) current.name = line.substring(commaIdx + 1).trim();
+
+      // tvg-logo
+      const logoM = line.match(/tvg-logo="([^"]*)"/);
+      if (logoM) current.logo = logoM[1];
+
+      // group-title
+      const grpM = line.match(/group-title="([^"]*)"/);
+      if (grpM) current.group = grpM[1];
+
+    } else if (line.startsWith('#EXTHTTP:') && current) {
+      try {
+        const json = JSON.parse(line.substring(9));
+        if (json.cookie) current.cookie = json.cookie;
+      } catch {}
+
+    } else if (line.startsWith('#EXTVLCOPT:') && current) {
+      const uaM = line.match(/http-user-agent=(.+)/i);
+      if (uaM) current.ua = uaM[1].trim();
+
+    } else if (line && !line.startsWith('#') && current) {
+      current.url = line;
+      channels.push(current);
+      current = null;
+    }
   }
 
-  const kid_b64 = hexToBase64url(KEY_ID);
-  const key_b64 = hexToBase64url(KEY_VAL);
+  return channels;
+}
 
-  const clearKeyJson = JSON.stringify({
-    keys: [{ kty: "oct", kid: kid_b64, k: key_b64 }],
-    type: "temporary"
-  });
-  const licenseUrl = "data:application/json;base64," + btoa(clearKeyJson);
+/* ═══════════════════════════════════════════════
+   URL RESOLVER — Cookie চ্যানেলের URL proxy দিয়ে route করে
+═══════════════════════════════════════════════ */
+function resolveUrl(ch) {
+  const workerUrl = $('workerUrl').value.trim().replace(/\/$/, '');
 
-  const video  = document.getElementById("v");
-  const status = document.getElementById("status");
-
-  const player = dashjs.MediaPlayer().create();
-
-  player.setProtectionData({
-    "org.w3.clearkey": {
-      serverURL: licenseUrl
+  if (ch.cookie && workerUrl) {
+    try {
+      const u = new URL(ch.url);
+      // URLSearchParams exactly একবার encode করে
+      const params = new URLSearchParams();
+      params.set('path', u.pathname);
+      params.set('cookie', ch.cookie);
+      if (ch.ua) params.set('ua', ch.ua);
+      return `${workerUrl}?${params.toString()}`;
+    } catch {
+      return ch.url;
     }
+  }
+
+  // Token-in-URL streams (prod-cdn01) → সরাসরি চলে
+  return ch.url;
+}
+
+/* ═══════════════════════════════════════════════
+   PLAYER
+═══════════════════════════════════════════════ */
+function playChannel(idx) {
+  const ch = state.channels[idx];
+  if (!ch) return;
+
+  state.currentIdx = idx;
+  state.isPlaying = true;
+
+  // Update sidebar active
+  document.querySelectorAll('.ch-item').forEach((el, i) => {
+    el.classList.toggle('active', parseInt(el.dataset.idx) === idx);
   });
 
-  player.attachView(video);
-  player.attachSource(MPD_URL);
+  // Destroy previous HLS
+  if (hls) { hls.destroy(); hls = null; }
+  videoEl.src = '';
 
-  player.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, () => {
-    status.textContent = "✅ Stream loaded!";
+  showLoading(true, `লোড হচ্ছে: ${ch.name}`);
+  $('emptyState').style.display = 'none';
+  updateNowBar(ch);
+
+  const url = resolveUrl(ch);
+  const ua = ch.ua || navigator.userAgent;
+
+  if (Hls.isSupported()) {
+    hls = new Hls({
+      xhrSetup: xhr => { xhr.setRequestHeader('User-Agent', ua); },
+      fetchSetup: (context, initParams) => {
+        initParams.headers = { ...initParams.headers, 'User-Agent': ua };
+        return new Request(context.url, initParams);
+      },
+      enableWorker: true,
+      lowLatencyMode: true,
+      backBufferLength: 30,
+    });
+    hls.loadSource(url);
+    hls.attachMedia(videoEl);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      videoEl.play().catch(() => {});
+      showLoading(false);
+    });
+    hls.on(Hls.Events.ERROR, (e, data) => {
+      if (data.fatal) {
+        showLoading(true, '⚠️ লোড ব্যর্থ — পুনরায় চেষ্টা করছি...');
+        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+        else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) hls.recoverMediaError();
+        else { showLoading(true, '❌ স্ট্রিম চলছে না'); }
+      }
+    });
+  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari native HLS
+    videoEl.src = url;
+    videoEl.play().catch(() => {});
+    showLoading(false);
+  } else {
+    showLoading(true, '❌ এই browser HLS সাপোর্ট করে না');
+  }
+
+  updatePlayPauseIcon();
+}
+
+function showLoading(show, text = 'লোড হচ্ছে...') {
+  $('loadOverlay').classList.toggle('hidden', !show);
+  $('loadText').textContent = text;
+}
+
+function updateNowBar(ch) {
+  $('nowBar').style.display = 'flex';
+  $('nowName').textContent = ch.name;
+  $('nowGroup').textContent = ch.group;
+  $('nowStatus').textContent = ch.cookie ? '🔐 Cookie Auth' : '🔓 Direct';
+  if (ch.logo) {
+    $('nowLogo').src = ch.logo;
+    $('nowLogo').style.display = '';
+  } else {
+    $('nowLogo').style.display = 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   CHANNEL LIST RENDER
+═══════════════════════════════════════════════ */
+function renderChannels() {
+  const q = state.query.toLowerCase();
+  const list = $('chList');
+  list.innerHTML = '';
+
+  const filtered = state.channels.filter((ch, i) => {
+    const matchGroup = state.activeGroup === 'সব' || ch.group === state.activeGroup;
+    const matchQ = !q || ch.name.toLowerCase().includes(q) || ch.group.toLowerCase().includes(q);
+    return matchGroup && matchQ;
   });
 
-  player.on(dashjs.MediaPlayer.events.ERROR, (e) => {
-    const msg = e?.error?.message || e?.error?.code || JSON.stringify(e?.error);
-    status.textContent = "❌ " + msg;
-    console.error("DASH ERROR:", e);
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--t3);font-size:13px">কোনো চ্যানেল পাওয়া যায়নি</div>';
+    return;
+  }
+
+  filtered.forEach(ch => {
+    const realIdx = state.channels.indexOf(ch);
+    const el = document.createElement('div');
+    el.className = 'ch-item' + (realIdx === state.currentIdx ? ' active' : '');
+    el.dataset.idx = realIdx;
+
+    const logoHtml = ch.logo
+      ? `<img class="ch-logo" src="${escHtml(ch.logo)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+        + `<div class="ch-logo-placeholder" style="display:none">${escHtml(ch.name.substring(0,2))}</div>`
+      : `<div class="ch-logo-placeholder">${escHtml(ch.name.substring(0,2))}</div>`;
+
+    el.innerHTML = logoHtml + `<div class="ch-info">
+      <div class="ch-name">${escHtml(ch.name)}</div>
+      <div class="ch-group">${escHtml(ch.group)}</div>
+    </div>`;
+
+    el.addEventListener('click', () => {
+      playChannel(realIdx);
+      if (window.innerWidth <= 768) sidebar.classList.remove('mobile-open');
+    });
+
+    list.appendChild(el);
   });
+}
+
+function renderGroups() {
+  const groups = ['সব', ...new Set(state.channels.map(c => c.group))];
+  const wrap = $('groupsWrap');
+  wrap.innerHTML = '';
+  groups.forEach(g => {
+    const chip = document.createElement('div');
+    chip.className = 'group-chip' + (g === state.activeGroup ? ' active' : '');
+    chip.textContent = g;
+    chip.addEventListener('click', () => {
+      state.activeGroup = g;
+      renderGroups();
+      renderChannels();
+    });
+    wrap.appendChild(chip);
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════════════
+   M3U LOADING
+═══════════════════════════════════════════════ */
+function loadM3UText(text) {
+  const channels = parseM3U(text);
+  if (!channels.length) { showToast('কোনো চ্যানেল পাওয়া যায়নি'); return; }
+  state.channels = channels;
+  state.currentIdx = -1;
+  state.activeGroup = 'সব';
+  $('emptyState').style.display = 'flex';
+  $('nowBar').style.display = 'none';
+  renderGroups();
+  renderChannels();
+  closeModal();
+  showToast(`✅ ${channels.length}টি চ্যানেল লোড হয়েছে`);
+  localStorage.setItem('ks_m3u', text);
+}
+
+async function loadM3UFromUrl(url) {
+  if (!url) { showToast('URL দাও'); return; }
+  showToast('লোড হচ্ছে...');
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    loadM3UText(text);
+  } catch (e) {
+    showToast('❌ লোড ব্যর্থ: ' + e.message);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+function openModal() { $('modalBd').classList.remove('hidden'); }
+function closeModal() { $('modalBd').classList.add('hidden'); }
+
+$('loadM3uBtn').addEventListener('click', openModal);
+$('emptyLoadBtn').addEventListener('click', openModal);
+$('modalClose').addEventListener('click', closeModal);
+$('modalBd').addEventListener('click', e => { if (e.target === $('modalBd')) closeModal(); });
+$('loadUrlBtn').addEventListener('click', () => loadM3UFromUrl($('m3uUrl').value.trim()));
+$('pasteLoadBtn').addEventListener('click', () => loadM3UText($('m3uPaste').value));
+$('m3uUrl').addEventListener('keydown', e => { if (e.key === 'Enter') $('loadUrlBtn').click(); });
+
+/* ═══════════════════════════════════════════════
+   SEARCH
+═══════════════════════════════════════════════ */
+$('sbSearch').addEventListener('input', e => {
+  state.query = e.target.value;
+  renderChannels();
+});
+
+/* ═══════════════════════════════════════════════
+   CONTROLS — PLAY/PAUSE + NAV
+═══════════════════════════════════════════════ */
+function togglePlayPause() {
+  if (videoEl.paused) { videoEl.play(); state.isPlaying = true; }
+  else { videoEl.pause(); state.isPlaying = false; }
+  updatePlayPauseIcon();
+}
+
+function updatePlayPauseIcon() {
+  const PAUSE = 'M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5';
+  const PLAY  = 'm11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393';
+  $('ppIcon').setAttribute('d', state.isPlaying ? PAUSE : PLAY);
+}
+
+function navigateChannel(dir) {
+  if (!state.channels.length) return;
+  let next = state.currentIdx + dir;
+  if (next < 0) next = state.channels.length - 1;
+  if (next >= state.channels.length) next = 0;
+  playChannel(next);
+}
+
+$('playPauseBtn').addEventListener('click', () => { togglePlayPause(); startHideTimer(); });
+$('prevBtn').addEventListener('click', () => navigateChannel(-1));
+$('nextBtn').addEventListener('click', () => navigateChannel(1));
+
+/* ═══════════════════════════════════════════════
+   CONTROLS — VOLUME + BOOST
+═══════════════════════════════════════════════ */
+let lastVol = 1;
+let audioCtx = null, gainNode = null, sourceConnected = false;
+
+function ensureAudio() {
+  if (audioCtx) return;
+  audioCtx = new(window.AudioContext || window.webkitAudioContext)();
+  gainNode = audioCtx.createGain();
+  gainNode.connect(audioCtx.destination);
+}
+
+function connectSource() {
+  if (sourceConnected || !audioCtx) return;
+  try { const s = audioCtx.createMediaElementSource(videoEl); s.connect(gainNode); sourceConnected = true; } catch {}
+}
+
+function updateTrack(slider, val) {
+  const bs = 100/130*100, pct = val/130*100;
+  if (val <= 100) {
+    slider.style.background = `linear-gradient(to right,var(--blue3) 0%,var(--blue3) ${pct}%,rgba(255,255,255,.18) ${pct}%,rgba(255,255,255,.18) 100%)`;
+    slider.style.setProperty('--thumb-color','var(--blue3)');
+  } else {
+    slider.style.background = `linear-gradient(to right,var(--blue3) 0%,var(--blue3) ${bs}%,var(--red2) ${bs}%,var(--red2) ${pct}%,rgba(255,255,255,.18) ${pct}%,rgba(255,255,255,.18) 100%)`;
+    slider.style.setProperty('--thumb-color','var(--red2)');
+  }
+}
+
+const MUTED_D = 'M6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06m7.137 2.096a.5.5 0 0 1 0 .708L12.207 8l1.647 1.646a.5.5 0 0 1-.708.708L11.5 8.707l-1.646 1.647a.5.5 0 0 1-.708-.708L10.793 8 9.146 6.354a.5.5 0 1 1 .708-.708L11.5 7.293l1.646-1.647a.5.5 0 0 1 .708 0';
+const SOUND_D = 'M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12zm3.025 4a4.5 4.5 0 0 1-1.318 3.182L10 10.475A3.5 3.5 0 0 0 11.025 8 3.5 3.5 0 0 0 10 5.525l.707-.707A4.5 4.5 0 0 1 12.025 8';
+
+function setVolume(vol, muted, sv) {
+  vol = Math.max(0,Math.min(1,vol));
+  videoEl.volume = vol; videoEl.muted = muted; state.isMuted = muted;
+  const disp = muted ? 0 : (sv !== undefined ? sv : Math.round(vol*100));
+  [$('volSlider'),$('volSliderMobile')].forEach(s => { s.value = disp; updateTrack(s, disp); });
+  if (gainNode) gainNode.gain.value = muted ? 0 : (disp > 100 ? disp/100 : 1);
+  const d = (muted || vol===0) ? MUTED_D : SOUND_D;
+  [$('volIcon'),$('volIcon2')].forEach(i => i && i.setAttribute('d', d));
+}
+
+$('muteBtn').addEventListener('click', () => {
+  ensureAudio(); connectSource();
+  if (state.isMuted || videoEl.volume===0) setVolume(lastVol>1?1:lastVol, false, Math.round(lastVol*100));
+  else { lastVol = parseFloat($('volSlider').value)/100; setVolume(videoEl.volume, true, parseFloat($('volSlider').value)); }
+});
+
+function handleVol(e) {
+  ensureAudio(); connectSource();
+  if (audioCtx.state==='suspended') audioCtx.resume();
+  const sv = parseFloat(e.target.value);
+  const vol = sv<=100 ? sv/100 : 1;
+  const gain = sv>100 ? sv/100 : 1;
+  if (sv>0) lastVol = sv/100;
+  videoEl.volume = vol; videoEl.muted = false; state.isMuted = false;
+  if (gainNode) gainNode.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.01);
+  [$('volSlider'),$('volSliderMobile')].forEach(s => { s.value = sv; updateTrack(s, sv); });
+  const d = sv===0 ? MUTED_D : SOUND_D;
+  [$('volIcon'),$('volIcon2')].forEach(i => i && i.setAttribute('d', d));
+}
+
+$('volSlider').addEventListener('input', handleVol);
+$('volSliderMobile').addEventListener('input', handleVol);
+videoEl.addEventListener('play', () => { if(audioCtx?.state==='suspended') audioCtx.resume(); ensureAudio(); connectSource(); });
+updateTrack($('volSlider'), 100); updateTrack($('volSliderMobile'), 100);
+
+/* ═══════════════════════════════════════════════
+   CONTROLS — FULLSCREEN + PiP
+═══════════════════════════════════════════════ */
+$('fullscreenBtn').addEventListener('click', () => {
+  if (!document.fullscreenElement) videoWrap.requestFullscreen?.() || videoWrap.webkitRequestFullscreen?.();
+  else document.exitFullscreen?.() || document.webkitExitFullscreen?.();
+});
+document.addEventListener('fullscreenchange', () => {
+  if (document.fullscreenElement) screen.orientation?.lock?.('landscape').catch(()=>{});
+  else screen.orientation?.unlock?.();
+});
+
+async function togglePiP() {
+  try {
+    if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
+    await videoEl.requestPictureInPicture();
+  } catch { showToast('PiP সাপোর্ট নেই'); }
+}
+
+$('pipBtn').addEventListener('click', togglePiP);
+$('pipRow').addEventListener('click', () => { morePopup.classList.remove('open'); togglePiP(); });
+document.addEventListener('enterpictureinpicture', () => $('pipBtn').classList.add('active'));
+document.addEventListener('leavepictureinpicture', () => $('pipBtn').classList.remove('active'));
+if (document.pictureInPictureEnabled) { $('pipBtn').style.display = ''; $('pipRow').style.display = 'flex'; }
+
+/* ═══════════════════════════════════════════════
+   CONTROLS — TAP / AUTO-HIDE
+═══════════════════════════════════════════════ */
+let hideTimer, tapTimer = null, tapCount = 0;
+
+function startHideTimer() {
+  clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => { if (!morePopup.classList.contains('open')) videoWrap.classList.remove('controls-visible'); }, 3000);
+}
+
+const PLAY_PATH = 'm11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393';
+const PAUSE_PATH = 'M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5';
+
+videoWrap.addEventListener('click', e => {
+  if (state.currentIdx === -1) return;
+  if (e.target.closest('.ctrl-btn,.more-popup,input[type=range]')) return;
+  tapCount++;
+  if (tapCount === 1) {
+    tapTimer = setTimeout(() => {
+      tapCount = 0;
+      videoWrap.classList.toggle('controls-visible')
+        ? startHideTimer()
+        : clearTimeout(hideTimer);
+    }, 250);
+  } else if (tapCount === 2) {
+    clearTimeout(tapTimer); tapCount = 0;
+    togglePlayPause();
+    $('bigPlayIcon').setAttribute('d', state.isPlaying ? PAUSE_PATH : PLAY_PATH);
+    bigPlay.classList.add('show');
+    setTimeout(() => bigPlay.classList.remove('show'), 700);
+    videoWrap.classList.add('controls-visible'); startHideTimer();
+  }
+});
+
+videoWrap.addEventListener('mousemove', () => {
+  if (window.matchMedia('(pointer:coarse)').matches) return;
+  videoWrap.classList.add('controls-visible'); startHideTimer();
+});
+
+/* ═══════════════════════════════════════════════
+   MORE MENU
+═══════════════════════════════════════════════ */
+$('moreBtn').addEventListener('click', e => { e.stopPropagation(); morePopup.classList.toggle('open'); startHideTimer(); });
+document.addEventListener('click', e => {
+  morePopup.classList.remove('open');
+  if (!videoWrap.contains(e.target)) videoWrap.classList.remove('controls-visible');
+});
+morePopup.addEventListener('click', e => e.stopPropagation());
+
+/* ═══════════════════════════════════════════════
+   LAYOUT SYNC
+═══════════════════════════════════════════════ */
+function syncLayout() {
+  const mob = window.innerWidth <= 450;
+  $('volSlider').style.display = mob ? 'none' : '';
+  $('moreBtn').style.display = mob ? '' : 'none';
+}
+syncLayout(); window.addEventListener('resize', syncLayout);
+
+/* ═══════════════════════════════════════════════
+   LONG PRESS 1.5× SPEED
+═══════════════════════════════════════════════ */
+(function(){
+  const speedEl = $('speedIndicator');
+  let pt=null, isFast=false, ns=1;
+  function go(){ if(state.currentIdx===-1||isFast||videoEl.paused) return; isFast=true; ns=videoEl.playbackRate||1; videoEl.playbackRate=1.5; videoWrap.classList.remove('controls-visible'); speedEl.classList.add('show'); }
+  function stop(){ if(!isFast) return; isFast=false; videoEl.playbackRate=ns; speedEl.classList.remove('show'); }
+  function cancel(){ clearTimeout(pt); pt=null; }
+  videoWrap.addEventListener('touchstart',e=>{ if(e.touches.length!==1) return; cancel(); pt=setTimeout(go,500); },{passive:true});
+  videoWrap.addEventListener('touchend',()=>{ cancel(); stop(); });
+  videoWrap.addEventListener('touchcancel',()=>{ cancel(); stop(); });
+  videoWrap.addEventListener('touchmove',()=>{ cancel(); stop(); });
+  videoWrap.addEventListener('mousedown',e=>{ if(e.button!==0) return; cancel(); pt=setTimeout(go,500); });
+  window.addEventListener('mouseup',()=>{ cancel(); stop(); });
+})();
+
+/* ═══════════════════════════════════════════════
+   KEYBOARD
+═══════════════════════════════════════════════ */
+document.addEventListener('keydown', e => {
+  if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+  if (e.code==='Space') { e.preventDefault(); togglePlayPause(); }
+  if (e.code==='ArrowRight') navigateChannel(1);
+  if (e.code==='ArrowLeft') navigateChannel(-1);
+  if (e.code==='ArrowUp') setVolume(Math.min(1,videoEl.volume+0.1),false);
+  if (e.code==='ArrowDown') { const v=Math.max(0,videoEl.volume-0.1); setVolume(v,v===0); }
+  if (e.code==='KeyF') $('fullscreenBtn').click();
+  if (e.code==='KeyM') $('muteBtn').click();
+});
+
+/* ═══════════════════════════════════════════════
+   SIDEBAR TOGGLE
+═══════════════════════════════════════════════ */
+$('sidebarToggle').addEventListener('click', () => {
+  if (window.innerWidth <= 768) sidebar.classList.toggle('mobile-open');
+  else sidebar.classList.toggle('collapsed');
+});
+
+/* ═══════════════════════════════════════════════
+   THEME
+═══════════════════════════════════════════════ */
+const savedTheme = localStorage.getItem('ks_theme');
+const dark = window.matchMedia('(prefers-color-scheme:dark)').matches;
+document.documentElement.setAttribute('data-theme', savedTheme||(dark?'dark':'light'));
+$('themeToggle').addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',next);
+  localStorage.setItem('ks_theme',next);
+  $('themeToggle').textContent = next==='dark'?'🌙':'☀️';
+});
+
+/* ═══════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ═══════════════════════════════════════════════
+   AUTO-RESTORE LAST M3U
+═══════════════════════════════════════════════ */
+const saved = localStorage.getItem('ks_m3u');
+if (saved) {
+  try {
+    const chs = parseM3U(saved);
+    if (chs.length) {
+      state.channels = chs;
+      renderGroups(); renderChannels();
+      $('emptyState').style.display = 'flex';
+      showToast(`📺 ${chs.length}টি চ্যানেল পুনরায় লোড হয়েছে`);
+    }
+  } catch {}
+}
+
+// Worker URL save/restore
+const savedWorker = localStorage.getItem('ks_worker');
+if (savedWorker) $('workerUrl').value = savedWorker;
+$('workerUrl').addEventListener('change', () => localStorage.setItem('ks_worker', $('workerUrl').value.trim()));
+
+// Open modal if nothing loaded
+if (!saved) openModal();
 </script>
-
 </body>
 </html>
