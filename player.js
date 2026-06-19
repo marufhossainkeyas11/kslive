@@ -4,10 +4,41 @@
 const PLAYLISTS_JSON_URL = "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/playlists.json";
 let PLAYLISTS = [];
 
+/* ═══════════════════════════════════════════════
+   UNIVERSAL PROXY HELPER
+   ═══════════════════════════════════════════════ */
+const WORKER_URL = "https://long-disk-874c.marufhossainkeyas.workers.dev/"; 
+
+function buildProxyUrl(targetUrl, headers = {}) {
+  const p = new URLSearchParams();
+  p.set('url', targetUrl);
+  for (const [k, v] of Object.entries(headers)) {
+    if (v) p.set('h_' + k.toLowerCase(), v);
+  }
+  return `${WORKER_URL}?${p.toString()}`;
+}
+
+function resolveStreamUrl(ch) {
+  const hdrs = ch.compiledHeaders || {};
+  const needsProxy = Object.keys(hdrs).length > 0;
+  if (!needsProxy) return ch.url; 
+  return buildProxyUrl(ch.url, hdrs);
+}
 
 /* ═══════════════════════════════════════════════════════
    M3U PARSER
    ═══════════════════════════════════════════════════════ */
+function normalizeHeaders(current) {
+  const h = {};
+  if (current.userAgent) h['user-agent'] = current.userAgent;
+  if (current.referrer) h['referer'] = current.referrer;
+  if (current.cookies) h['cookie'] = current.cookies;
+  Object.entries(current.headers || {}).forEach(([k, v]) => {
+    h[k.toLowerCase()] = v;
+  });
+  return h;
+}
+
 function parseM3U(text) {
   const lines = text.split(/\r?\n/);
   const channels = [];
@@ -65,14 +96,29 @@ function parseM3U(text) {
     
     if ((line.startsWith('#KODIPROP:') || line.startsWith('#EXTHTTP:')) && current) {
       const val = line.split(':').slice(1).join(':').trim();
+      
+      if (val.startsWith('{')) {
+        try {
+          const json = JSON.parse(val);
+          if (json.cookie) current.cookies = json.cookie;
+          if (json['user-agent']) current.userAgent = json['user-agent'];
+          if (json.referrer || json.referer) current.referrer = json.referrer || json.referer;
+        } catch (e) { /* malformed JSON, skip */ }
+        continue;
+      }
+      
       if (val.startsWith('inputstream.adaptive.stream_headers=')) {
         val.split('=').slice(1).join('=').split('&').forEach(pair => {
           const [hk, hv] = pair.split('=');
           if (hk && hv) current.headers[decodeURIComponent(hk)] = decodeURIComponent(hv);
         });
+        continue;
       }
-      if (val.startsWith('http-user-agent=')) current.userAgent = val.split('=').slice(1).join('=');
-      continue;
+      
+      if (val.startsWith('http-user-agent=')) {
+        current.userAgent = val.split('=').slice(1).join('=');
+        continue;
+      }
     }
     
     if (current && !line.startsWith('#') && line.length > 0) {
@@ -81,7 +127,7 @@ function parseM3U(text) {
       if (current.userAgent) hdrs['User-Agent'] = current.userAgent;
       if (current.referrer) hdrs['Referer'] = current.referrer;
       if (current.cookies) hdrs['Cookie'] = current.cookies;
-      current.compiledHeaders = hdrs;
+      current.compiledHeaders = normalizeHeaders(current);
       channels.push(current);
       current = null;
     }
@@ -408,35 +454,43 @@ function playChannel(idx) {
 /* ═══════════════════════════════════════════════════════
    PLAYER — STREAM LOADING (HLS / NATIVE / DIRECT)
    ═══════════════════════════════════════════════════════ */
-function loadStream(ch) {
-  if (state.hls) { state.hls.destroy();
-    state.hls = null; }
+function loadStream(ch, forceProxy = false) {
+  if (state.hls) { state.hls.destroy(); state.hls = null; }
   videoEl.src = '';
   setStatus('Connecting…', 'yellow');
   qualityBadge.textContent = 'HLS';
-  
-  const url = ch.url;
+
   const hdrs = ch.compiledHeaders || {};
-  const isHLS = url.includes('.m3u8') || url.includes('playlist') || url.includes('hls');
-  
-  if (Hls.isSupported() && (isHLS || !videoEl.canPlayType('application/vnd.apple.mpegurl'))) {
+  const hasHeaders = Object.keys(hdrs).length > 0;
+  const url = (forceProxy || hasHeaders) ? buildProxyUrl(ch.url, hdrs) : ch.url;
+
+  if (Hls.isSupported()) {
     const hls = new Hls({
       xhrSetup: (xhr) => {
-        if (hdrs['User-Agent']) xhr.setRequestHeader('User-Agent', hdrs['User-Agent']);
-        if (hdrs['Referer']) xhr.setRequestHeader('Referer', hdrs['Referer']);
+        if (hdrs['user-agent']) xhr.setRequestHeader('User-Agent', hdrs['user-agent']);
       },
       enableWorker: true,
       lowLatencyMode: true,
       backBufferLength: 30,
-      maxBufferLength: 60,
-      maxMaxBufferLength: 120,
-      capLevelToPlayerSize: true,
-      startLevel: -1,
+
+      manifestLoadingMaxRetry: forceProxy ? 4 : 1,
+      manifestLoadingRetryDelay: 500,
+      manifestLoadingMaxRetryTimeout: 4000,
+
+      levelLoadingMaxRetry: forceProxy ? 4 : 1,
+      levelLoadingRetryDelay: 500,
+      levelLoadingMaxRetryTimeout: 4000,
+
+      fragLoadingMaxRetry: forceProxy ? 4 : 1,
+      fragLoadingRetryDelay: 500,
+      fragLoadingMaxRetryTimeout: 4000,
     });
     state.hls = hls;
     hls.loadSource(url);
     hls.attachMedia(videoEl);
-    
+
+    let proxyFallbackTried = forceProxy;
+
     hls.on(Hls.Events.MANIFEST_PARSED, (e, data) => {
       qualityBadge.textContent = data.levels.length > 1 ? `AUTO · ${data.levels.length}Q` : 'HLS';
       videoEl.play().catch(() => {});
@@ -444,47 +498,49 @@ function loadStream(ch) {
       state.isPlaying = true;
       updatePlayPauseIcon();
     });
-    
-    hls.on(Hls.Events.LEVEL_SWITCHED, (e, data) => {
-      const lv = hls.levels[data.level];
-      if (lv) qualityBadge.textContent = lv.height ? `${lv.height}p` : 'HLS';
-    });
-    
+
     hls.on(Hls.Events.ERROR, (e, data) => {
-      console.error('HLS error:', data.type, data.details, data.fatal);
+      const isHttpBlock = data.response && (data.response.code === 503 || data.response.code === 403);
+
+      if (!proxyFallbackTried && isHttpBlock) {
+        proxyFallbackTried = true;
+        console.warn('Direct fetch blocked (', data.response.code, '), switching to proxy…');
+        setStatus('Retrying via proxy…', 'yellow');
+        hls.destroy();
+        setTimeout(() => loadStream(ch, true), 200);
+        return;
+      }
+
       if (!data.fatal) return;
+
+      if (!proxyFallbackTried) {
+        proxyFallbackTried = true;
+        console.warn('Direct play failed (fatal), retrying via proxy…');
+        setStatus('Retrying via proxy…', 'yellow');
+        hls.destroy();
+        setTimeout(() => loadStream(ch, true), 200);
+        return;
+      }
+
       if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
         if (state.retryCount < state.MAX_RETRY) {
           state.retryCount++;
           setStatus(`Reconnecting (${state.retryCount}/${state.MAX_RETRY})…`, 'yellow');
           setTimeout(() => hls.startLoad(), 2000);
         } else {
-          showError('Network error. Stream may be offline or CORS-blocked.');
+          showError('Stream offline or blocked.');
         }
       } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-        setStatus('Recovering media…', 'yellow');
         hls.recoverMediaError();
       } else {
-        showError('Fatal stream error. Try another channel.');
+        showError('Stream is not being created.');
       }
     });
-    
+
   } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-    // Native HLS (Safari)
     videoEl.src = url;
     videoEl.play().catch(() => {});
-    qualityBadge.textContent = 'Native HLS';
     setStatus('Playing', 'green');
-    state.isPlaying = true;
-    updatePlayPauseIcon();
-  } else {
-    // Direct (MP4 etc.)
-    videoEl.src = url;
-    videoEl.play().catch(() => {});
-    qualityBadge.textContent = 'Direct';
-    setStatus('Playing', 'green');
-    state.isPlaying = true;
-    updatePlayPauseIcon();
   }
 }
 
