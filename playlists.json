@@ -4,6 +4,10 @@
     "url": "https://raw.githubusercontent.com/shamimpipon/Shamim-live-tv/refs/heads/main/Channel.m3u"
   },
   {
+    "name": "Toffee (Premium)",
+    "url": "https://toffee-stream-keeper.lovable.app/toffee.m3u"
+  },
+  {
     "name": "All BD (Reliable)",
     "url": "https://raw.githubusercontent.com/abusaeeidx/Mrgify-BDIX-IPTV/refs/heads/main/playlist.m3u"
   },
@@ -20,19 +24,15 @@
     "url": "https://raw.githubusercontent.com/srhady/Hady/refs/heads/main/akash_live.m3u"
   },
   {
-    "name": "Tapmad Sports (Reliable)",
+    "name": "Tapmad Sports (Premium)",
     "url": "https://raw.githubusercontent.com/srhady/tapmad-bd/refs/heads/main/tapmad_bd.m3u"
   },
   {
-    "name": "Sony Live Event (🔒)",
-    "url": "https://raw.githubusercontent.com/srhady/SonyLiv/refs/heads/main/sonyliv_playlist.m3u"
+    "name": "Willow (Premium)",
+    "url": "https://raw.githubusercontent.com/srhady/willow-event/refs/heads/main/live_sports.m3u"
   },
   {
-    "name": "Fancode Sports (🔒)",
+    "name": "Fancode Sports (Premium)",
     "url": "https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u"
-  },
-  {
-    "name": "Toffee (🔒)",
-    "url": "https://toffee-stream-keeper.lovable.app/toffee.m3u"
   }
 ]
