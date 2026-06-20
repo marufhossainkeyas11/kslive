@@ -301,16 +301,41 @@ async function init() {
 /* ═══════════════════════════════════════════════════════
    PLAYLIST TABS
    ═══════════════════════════════════════════════════════ */
+const plScrollLeft  = $('plScrollLeft');
+const plScrollRight = $('plScrollRight');
+
+function updatePlScrollButtons() {
+  const el = playlistTabs;
+  const maxScroll = el.scrollWidth - el.clientWidth;
+  const needsScroll = maxScroll > 4;
+
+  plScrollLeft.style.display  = needsScroll ? 'flex' : 'none';
+  plScrollRight.style.display = needsScroll ? 'flex' : 'none';
+
+  plScrollLeft.disabled  = el.scrollLeft <= 4;
+  plScrollRight.disabled = el.scrollLeft >= maxScroll - 4;
+}
+
+plScrollLeft.addEventListener('click', () => {
+  playlistTabs.scrollBy({ left: -160, behavior: 'smooth' });
+});
+plScrollRight.addEventListener('click', () => {
+  playlistTabs.scrollBy({ left: 160, behavior: 'smooth' });
+});
+playlistTabs.addEventListener('scroll', updatePlScrollButtons);
+window.addEventListener('resize', updatePlScrollButtons);
+
+// buildPlaylistTabs() এর শেষে এটা কল করো
 function buildPlaylistTabs() {
   playlistTabs.innerHTML = '';
   state.playlists.forEach((pl, idx) => {
     const tab = document.createElement('button');
     tab.className = 'pl-tab' + (idx === 0 ? ' active' : '');
-    tab.innerHTML = `<span class="dot"></span>${escHtml(pl.name)}
-      <span style="font-family:var(--m);font-size:10px;opacity:0.6;margin-left:2px">(${pl.channels.length})</span>`;
+    tab.innerHTML = `<span class="live-dot"></span>${escHtml(pl.name)}<span class="pl-count">${pl.channels.length}</span>`;
     tab.addEventListener('click', () => switchPlaylist(idx));
     playlistTabs.appendChild(tab);
   });
+  setTimeout(updatePlScrollButtons, 50);
 }
 
 function switchPlaylist(idx) {
