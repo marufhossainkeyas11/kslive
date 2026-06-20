@@ -38,34 +38,106 @@
   <script>
     if ('serviceWorker' in navigator) {
       const SW_SRC = `
-                        const CACHE = 'kslive-v1';
-                        const SHELL = ['./kslive.svg'];
-                        
-                        self.addEventListener('install', e => {
-                          e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
-                          self.skipWaiting();
-                        });
-                        
-                        self.addEventListener('activate', e => {
-                          e.waitUntil(caches.keys().then(keys =>
-                            Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
-                          ));
-                          self.clients.claim();
-                        });
-                        
-                        self.addEventListener('fetch', e => {
-                          const url = new URL(e.request.url);
-                          if (url.pathname.endsWith('.svg')) {
-                            e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
-                            return;
-                          }
-                        });
-                      `;
-      const blob = new Blob([SW_SRC], { type: 'application/javascript' });
-      const swUrl = URL.createObjectURL(blob);
+        const CACHE = 'kslive-v2';
+        const STATIC = ['./kslive.svg'];
+    
+        /* ── Install: শুধু icon cache ── */
+        self.addEventListener('install', e => {
+          e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)));
+          self.skipWaiting();
+        });
+    
+        /* ── Activate: পুরনো cache সাফ ── */
+        self.addEventListener('activate', e => {
+          e.waitUntil(
+            caches.keys()
+              .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+          );
+          self.clients.claim();
+        });
+    
+        /* ── Fetch: performance-first strategy ── */
+        self.addEventListener('fetch', e => {
+          const req = e.request;
+          const url = new URL(req.url);
+    
+          /* 1. SVG icon → cache first */
+          if (url.pathname.endsWith('.svg')) {
+            e.respondWith(
+              caches.match(req).then(r => r || fetch(req))
+            );
+            return;
+          }
+    
+          /* 2. M3U / stream / external → নেটওয়ার্কই ভরসা, SW হাত দেবে না */
+          if (
+            url.hostname !== self.location.hostname ||
+            url.pathname.includes('.m3u') ||
+            url.pathname.includes('.m3u8') ||
+            url.pathname.includes('.ts') ||
+            url.pathname.includes('.json')
+          ) {
+            e.respondWith(fetch(req));
+            return;
+          }
+    
+          /* 3. Same-origin assets (css, js) → network-first, fast fallback */
+          e.respondWith(
+            fetch(req, { priority: 'high' })
+              .then(res => {
+                /* fresh copy background-এ cache করো */
+                if (res.ok) {
+                  const clone = res.clone();
+                  caches.open(CACHE).then(c => c.put(req, clone));
+                }
+                return res;
+              })
+              .catch(() => caches.match(req)) /* offline হলে cached version */
+          );
+        });
+    
+        /* ── Message: client থেকে skipWaiting চাইলে ── */
+        self.addEventListener('message', e => {
+          if (e.data === 'SKIP_WAITING') self.skipWaiting();
+        });
+    
+        /* ── Online/Offline: সব client কে জানাও ── */
+        self.addEventListener('online',  () => notifyClients('ONLINE'));
+        self.addEventListener('offline', () => notifyClients('OFFLINE'));
+    
+        function notifyClients(type) {
+          self.clients.matchAll({ includeUncontrolled: true }).then(clients =>
+            clients.forEach(c => c.postMessage({ type }))
+          );
+        }
+      `;
+    
+      const blob   = new Blob([SW_SRC], { type: 'application/javascript' });
+      const swUrl  = URL.createObjectURL(blob);
+    
       navigator.serviceWorker.register(swUrl, { scope: './' })
-        .then(() => console.log('SW registered'))
+        .then(reg => {
+          console.log('SW registered');
+    
+          /* নতুন SW পাওয়া গেলে auto-activate */
+          reg.addEventListener('updatefound', () => {
+            reg.installing?.addEventListener('statechange', function () {
+              if (this.state === 'installed' && navigator.serviceWorker.controller) {
+                reg.waiting?.postMessage('SKIP_WAITING');
+              }
+            });
+          });
+        })
         .catch(e => console.warn('SW failed:', e));
+    
+      /* SW থেকে online/offline message ধরো */
+      navigator.serviceWorker.addEventListener('message', ({ data }) => {
+        if (data?.type === 'OFFLINE') {
+          showToast("⚠️ No internet — stream won't load", 5000);
+        } else if (data?.type === 'ONLINE') {
+          showToast('✅ Connection is back.', 2500);
+        }
+      });
     }
   </script>
   <script async src="./umami.js" data-website-id="7f546f13-8a72-485b-87d2-5f6dee6fb1d9"></script>
