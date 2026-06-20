@@ -487,3 +487,81 @@ function checkMobile() {
 }
 window.addEventListener('resize', checkMobile);
 checkMobile();
+
+
+/* ═══════════════════════════════════════════════════════
+   SHARE — Temporary Expiring Channel Link
+   ═══════════════════════════════════════════════════════ */
+const SHARE_SECRET = 'kslive2025'; 
+const SHARE_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
+async function genShareToken(chIdx, playlistIdx) {
+  const ts = Date.now();
+  const raw = `${chIdx}:${playlistIdx}:${ts}:${SHARE_SECRET}`;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  return { ts, sig: hex };
+}
+
+async function verifyShareToken(chIdx, playlistIdx, ts, sig) {
+  if (Date.now() - Number(ts) > SHARE_TTL_MS) return false;
+  const raw = `${chIdx}:${playlistIdx}:${ts}:${SHARE_SECRET}`;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(raw));
+  const hex = Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 16);
+  return hex === sig;
+}
+
+async function shareChannel() {
+  if (state.currentIdx === -1) { showToast('No channel is playing'); return; }
+  const ch = state.channels[state.currentIdx];
+  const { ts, sig } = await genShareToken(state.currentIdx, state.activePlaylist);
+  const base = location.origin + location.pathname;
+  const url = `${base}?ch=${state.currentIdx}&pl=${state.activePlaylist}&t=${ts}&sig=${sig}`;
+  
+  const expiresIn = Math.round(SHARE_TTL_MS / 60000);
+  
+  const shareText =
+  `🔴 LIVE NOW on KSLIVE
+
+📺 ${ch.name}
+🆓 Free • No login required
+⏳ Link expires in 6 hours
+
+Watch now 👇`;
+  
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: `🔴 ${ch.name} — Live on KSLIVE`,
+        text: shareText,
+        url
+      });
+      return;
+    } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  
+  try {
+    await navigator.clipboard.writeText(`${shareText}\n${url}`);
+    showToast('Link copied! Expires in 6 hours.');
+  } catch {
+    showToast('Share not supported on this browser');
+  }
+}
+
+(async function checkSharedUrl() {
+  const p = new URLSearchParams(location.search);
+  const ch = p.get('ch'), pl = p.get('pl'), ts = p.get('t'), sig = p.get('sig');
+  if (!ch || !ts || !sig) return;
+  const valid = await verifyShareToken(ch, pl || 0, ts, sig);
+  if (!valid) { showToast('This link has expired. ⏰', 4000); return; }
+
+  const plIdx = parseInt(pl) || 0;
+  switchPlaylist(plIdx);
+  setTimeout(() => {
+    playChannel(parseInt(ch));
+    setTimeout(() => videoEl.play().catch(() => {}), 800);
+  }, 600);
+  history.replaceState({}, '', location.pathname);
+})();
+
+$('shareBtn').addEventListener('click', shareChannel);
