@@ -289,7 +289,15 @@ async function init() {
     switchPlaylist(last.plIdx);
     setTimeout(() => {
       playChannel(last.chIdx);
-      setTimeout(() => videoEl.play().catch(() => {}), 1000);
+      setTimeout(() => {
+        videoEl.play().then(() => {
+          state.isPlaying = true;
+          updatePlayPauseIcon();
+        }).catch(() => {
+          state.isPlaying = false;
+          updatePlayPauseIcon();
+        });
+      }, 1000);
     }, 500);
   }
   
@@ -519,10 +527,15 @@ function loadStream(ch, forceProxy = false) {
 
     hls.on(Hls.Events.MANIFEST_PARSED, (e, data) => {
       qualityBadge.textContent = data.levels.length > 1 ? `AUTO · ${data.levels.length}Q` : 'HLS';
-      videoEl.play().catch(() => {});
-      setStatus('Playing', 'green');
-      state.isPlaying = true;
-      updatePlayPauseIcon();
+      videoEl.play().then(() => {
+        state.isPlaying = true;
+        updatePlayPauseIcon();
+        setStatus('Playing', 'green');
+      }).catch(() => {
+        state.isPlaying = false;
+        updatePlayPauseIcon();
+        setStatus('Paused', 'yellow');
+      });
     });
 
     hls.on(Hls.Events.ERROR, (e, data) => {
