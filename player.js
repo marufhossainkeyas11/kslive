@@ -295,7 +295,8 @@ async function init() {
   
   checkMobile();
   setTimeout(() => loadingScreen.classList.add('hidden'), 600);
-}
+  setTimeout(checkSharedUrl, 800);
+}  
 
 
 /* ═══════════════════════════════════════════════════════
