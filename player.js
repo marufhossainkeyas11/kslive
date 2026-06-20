@@ -341,7 +341,7 @@ function buildPlaylistTabs() {
 function switchPlaylist(idx) {
   state.activePlaylist = idx;
   state.channels = state.playlists[idx]?.channels || [];
-  state.currentIdx = -1;
+  // state.currentIdx = -1;
   document.querySelectorAll('.pl-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
   state.activeGroup = 'All';
   buildGroupFilters();
