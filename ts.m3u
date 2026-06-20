@@ -1,15 +1,16 @@
 #EXTM3U
 
-#EXTINF:-1 tvg-logo="http://209.97.175.236/img/TSPORTS.png" group-title="TV",TSPORTS HD
-http://198.195.239.50:8095/tsports/index.m3u8
+#EXTINF:-1 tvg-name="Nederland VS Suède" group-title="Sports",Nederland VS Suède
+https://prod-fastly-eu-west-1.video.pscp.tv/Transcoding/v1/hls/dpXv_Bj52CxsfzkpeY2HfAG9GNFBl7qI6s8HSUWcyRO-cjXHZqH9jkGzhEIgwNcw6R5ZRRUbA8ZV7S0DXKMrkQ/non_transcode/eu-west-1/periscope-replay-direct-prod-eu-west-1-public/master_dynamic_delta.m3u8?type=live
 
-#EXTINF:-1 tvg-logo="http://209.97.175.236/img/TSPORTS.png" group-title="TV",TSPORTS HD 2
-https://prod-cdn01-live.toffeelive.com/live/FIFA-2026-4/1/master_1800.m3u8?hdntl=Expires=1781860204~_GO=Generated~URLPrefix=aHR0cHM6Ly9wcm9kLWNkbjAxLWxpdmUudG9mZmVlbGl2ZS5jb20~Signature=AduQTZ9Sj9zvSufjg0JASf_vDycyqdS8TPBOu-JKexBNXNW9DscK2nxR0lg5t16ryjLACgEgXZ7OiLvl6k-jUTI_KmcD
+#EXTINF:-1 tvg-name="Nederland VS Suède (720p)" group-title="Sports",Nederland VS Suède (720p)
+https://prod-fastly-eu-west-1.video.pscp.tv/Transcoding/v1/hls/dpXv_Bj52CxsfzkpeY2HfAG9GNFBl7qI6s8HSUWcyRO-cjXHZqH9jkGzhEIgwNcw6R5ZRRUbA8ZV7S0DXKMrkQ/transcode/eu-west-1/periscope-replay-direct-prod-eu-west-1-public/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsInZlcnNpb24iOiIyIn0.eyJFbmNvZGVyU2V0dGluZyI6ImVuY29kZXJfc2V0dGluZ183MjBwMzBfMTAiLCJIZWlnaHQiOjcyMCwiS2JwcyI6Mjc1MCwiV2lkdGgiOjEyODB9.ldktM4fCFRfkP4ZEBfZPKtlAUNAcTPkoz994YJAzWpE/dynamic_delta.m3u8?type=live
 
-#EXTINF:-1 tvg-logo="http://209.97.175.236/img/SOMOY_TV.png" group-title="TV",SOMOY TV
-https://live.thebosstv.com:30443/dwlive/Somoy-TV/chunks.m3u8
+#EXTINF:-1 tvg-name="Nederland VS Suède (480p)" group-title="Sports",Nederland VS Suède (480p)
+https://prod-fastly-eu-west-1.video.pscp.tv/Transcoding/v1/hls/dpXv_Bj52CxsfzkpeY2HfAG9GNFBl7qI6s8HSUWcyRO-cjXHZqH9jkGzhEIgwNcw6R5ZRRUbA8ZV7S0DXKMrkQ/transcode/eu-west-1/periscope-replay-direct-prod-eu-west-1-public/eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsInZlcnNpb24iOiIyIn0.eyJFbmNvZGVyU2V0dGluZyI6ImVuY29kZXJfc2V0dGluZ180ODBwMzBfMTAiLCJIZWlnaHQiOjQ4MCwiS2JwcyI6MTIwMCwiV2lkdGgiOjg0OH0.0LJi1usWbiPqp0QIcpq7Md5g1WxvJcPqVWNqsKw5nhA/dynamic_delta.m3u8?type=live
 
-#EXTINF:-1 tvg-logo="http://209.97.175.236/img/SONY_AATH.png" group-title="TV",SONY AATH
-http://198.195.239.50:8095/sonyAath/index.m3u8
+#EXTINF:-1 tvg-name="Nederland VS Suède (Backup 1)" group-title="Sports",Nederland VS Suède (Backup 1)
+https://as.roomtu.store/rook1.m3u8
 
-
+#EXTINF:-1 tvg-name="Nederland VS Suède (Backup 2 720p)" group-title="Sports",Nederland VS Suède (Backup 2 720p)
+https://as.roomtu.store/rook1_720/index.m3u8
