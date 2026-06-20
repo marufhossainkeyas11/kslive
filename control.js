@@ -2,11 +2,16 @@
    CONTROLS — PLAY/PAUSE + NAVIGATION
    ═══════════════════════════════════════════════════════ */
 function togglePlayPause() {
-  if (videoEl.paused) { videoEl.play();
-    state.isPlaying = true; }
-  else { videoEl.pause();
-    state.isPlaying = false; }
-  updatePlayPauseIcon();
+  if (videoEl.paused) {
+    videoEl.play().then(() => {
+      state.isPlaying = true;
+      updatePlayPauseIcon();
+    }).catch(() => {});
+  } else {
+    videoEl.pause();
+    state.isPlaying = false;
+    updatePlayPauseIcon();
+  }
 }
 
 function updatePlayPauseIcon() {
