@@ -88,7 +88,22 @@
   <!-- Top Bar -->
   <header class="topbar">
     <div class="logo">KS<span>LIVE</span></div>
-    <div class="playlist-tabs" id="playlistTabs"></div>
+    <div class="playlist-selector">
+      <div class="pl-label">Source</div>
+      <button class="pl-scroll-btn left" id="plScrollLeft" title="Scroll left">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10 3 5 8l5 5"/>
+        </svg>
+      </button>
+      <div class="playlist-tabs-wrap">
+        <div class="playlist-tabs" id="playlistTabs"></div>
+      </div>
+      <button class="pl-scroll-btn right" id="plScrollRight" title="Scroll right">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M6 3l5 5-5 5"/>
+        </svg>
+      </button>
+    </div>
     <div class="topbar-actions">
       <button class="icon-btn" id="refreshBtn" title="Refresh" onclick="(function(){try{if(typeof loadPlaylist==='function'){loadPlaylist();}else{location.reload();}}catch(e){location.reload();}})()">
         <svg xmlns="http://www.w3.org/2000/svg" height="20px" viewBox="0 -960 960 960" width="20px" fill="currentColor">
