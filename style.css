@@ -70,9 +70,9 @@ body {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
   padding: 0 20px;
-  height: 56px;
+  height: 60px;
   background: var(--bg2);
   border-bottom: 1px solid var(--bdr);
   flex-shrink: 0;
@@ -81,23 +81,64 @@ body {
 
 .logo {
   font-family: var(--d);
-  font-size: 24px;
+  font-size: 25px;
   letter-spacing: 2px;
   color: var(--blue3);
   text-shadow: 0 0 20px rgba(33,150,243,0.4);
   user-select: none;
   flex-shrink: 0;
+  margin-right: 24px;
+  padding-right: 10px;
+}
+.logo span { color: var(--text); opacity: 0.6; }
+
+/* ── PLAYLIST SELECTOR ── */
+.playlist-selector {
+  display: flex;
+  align-items: stretch;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border-left: 1px solid var(--bdr);
 }
 
-.logo span { color: var(--text); opacity: 0.6; }
+.pl-label {
+  display: flex;
+  align-items: center;
+  font-family: var(--m);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  color: var(--t3);
+  padding: 0 14px 0 18px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  user-select: none;
+}
+
+.playlist-tabs-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  height: 100%;
+}
+.playlist-tabs-wrap::after {
+  content: '';
+  position: absolute;
+  right: 0; top: 0; bottom: 0;
+  width: 28px;
+  background: linear-gradient(270deg, var(--bg2) 30%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+}
 
 .playlist-tabs {
   display: flex;
-  gap: 4px;
-  flex: 1;
+  height: 100%;
+  align-items: stretch;
   overflow-x: auto;
   scrollbar-width: none;
-  padding: 0 8px;
 }
 .playlist-tabs::-webkit-scrollbar { display: none; }
 
@@ -105,44 +146,94 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
-  border-radius: 8px;
+  padding: 0 16px;
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   color: var(--t2);
   font-family: var(--f);
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--trans);
   white-space: nowrap;
   flex-shrink: 0;
+  position: relative;
+  height: 100%;
+  transition: color var(--trans), background var(--trans);
+}
+.pl-tab::after {
+  content: '';
+  position: absolute;
+  left: 10px; right: 10px; bottom: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  transition: background var(--trans);
 }
 .pl-tab:hover {
-  background: var(--o-sm);
   color: var(--text);
-  border-color: var(--bdr);
+  background: var(--o-sm);
 }
 .pl-tab.active {
-  background: var(--blue);
-  color: #fff;
-  border-color: var(--blue2);
-  box-shadow: 0 2px 12px rgba(21,101,192,0.4);
+  color: var(--text);
+  font-weight: 600;
 }
-.pl-tab .dot {
+.pl-tab.active::after {
+  background: var(--blue3);
+  box-shadow: 0 0 8px rgba(33,150,243,0.6);
+}
+
+.pl-tab .live-dot {
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: currentColor;
-  opacity: 0.6;
+  background: var(--t3);
+  flex-shrink: 0;
 }
-.pl-tab.active .dot { background: var(--grn); opacity: 1; animation: pulse-dot 2s infinite; }
+.pl-tab.active .live-dot {
+  background: var(--grn);
+  box-shadow: 0 0 6px var(--grn);
+  animation: pulse-dot 2s infinite;
+}
+
+.pl-tab .pl-count {
+  font-family: var(--m);
+  font-size: 11px;
+  color: var(--t3);
+  background: var(--o-sm);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.pl-tab.active .pl-count {
+  color: var(--blue3);
+  background: rgba(33,150,243,0.12);
+}
 
 @keyframes pulse-dot {
   0%,100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.7); }
 }
 
+.pl-scroll-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  flex-shrink: 0;
+  background: var(--bg2);
+  border: none;
+  color: var(--t2);
+  cursor: pointer;
+  transition: color var(--trans), background var(--trans);
+}
+.pl-scroll-btn:hover { color: var(--text); background: var(--o-sm); }
+.pl-scroll-btn:disabled { opacity: 0.25; cursor: default; pointer-events: none; }
+.pl-scroll-btn.left { border-right: 1px solid var(--bdr); }
+.pl-scroll-btn.right { border-left: 1px solid var(--bdr); }
+
+/* fade mask আর দরকার নাই যখন arrow আছে, তাই অফ করে দিলাম */
+.playlist-tabs-wrap::after { display: none; }
+
 .topbar-actions {
+  padding-left: 20px;
   display: flex;
   align-items: center;
   gap: 8px;
