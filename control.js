@@ -568,7 +568,15 @@ async function checkSharedUrl() {
   if (!valid) { showToast('This link has expired ⏰', 4000); return; }
 
   playChannel(idx);
-  setTimeout(() => videoEl.play().catch(() => {}), 800);
+  setTimeout(() => {
+    videoEl.play().then(() => {
+      state.isPlaying = true;
+      updatePlayPauseIcon();
+    }).catch(() => {
+      state.isPlaying = false;
+      updatePlayPauseIcon();
+    });
+  }, 800);
   history.replaceState({}, '', location.pathname);
 }
 
