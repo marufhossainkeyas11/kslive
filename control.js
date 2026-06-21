@@ -18,6 +18,7 @@ function updatePlayPauseIcon() {
   const PAUSE_D = 'M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5';
   const PLAY_D = 'm11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393';
   $('ppIcon').setAttribute('d', state.isPlaying ? PAUSE_D : PLAY_D);
+  $('bpIcon').setAttribute('d', state.isPlaying ? PAUSE_D : PLAY_D);
 }
 
 function navigateChannel(dir) {
@@ -229,9 +230,6 @@ let hideTimer;
 let tapTimer = null;
 let tapCount = 0;
 
-const PAUSE_PATH = 'M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5m5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5';
-const PLAY_PATH = 'm11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393';
-
 function startHideTimer() {
   clearTimeout(hideTimer);
   hideTimer = setTimeout(() => {
@@ -264,7 +262,6 @@ videoWrap.addEventListener('click', (e) => {
     clearTimeout(tapTimer);
     tapCount = 0;
     togglePlayPause();
-    $('bigPlayIcon').querySelector('path').setAttribute('d', state.isPlaying ? PAUSE_PATH : PLAY_PATH);
     bigPlay.classList.add('show');
     setTimeout(() => {if(state.isPlaying) bigPlay.classList.remove('show');}, 700);
     videoWrap.classList.add('controls-visible');
@@ -580,6 +577,7 @@ async function checkSharedUrl() {
     }).catch(() => {
       state.isPlaying = false;
       updatePlayPauseIcon();
+      bigPlay.classList.add('show');
     });
   }, 800);
   history.replaceState({}, '', location.pathname);
