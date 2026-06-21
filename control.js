@@ -19,6 +19,7 @@ function updatePlayPauseIcon() {
   const PLAY_D = 'm11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393';
   $('ppIcon').setAttribute('d', state.isPlaying ? PAUSE_D : PLAY_D);
   $('bpIcon').setAttribute('d', state.isPlaying ? PAUSE_D : PLAY_D);
+  bigPlay.classList.add('show');
   setTimeout(() => {if(state.isPlaying) bigPlay.classList.remove('show');}, 700);
 }
 
@@ -240,7 +241,7 @@ function startHideTimer() {
 }
 
 videoWrap.addEventListener('click', (e) => {
-  if (state.currentIdx === -1) return;
+  // if (state.currentIdx === -1) return;
   if (e.target.closest('.ctrl-btn')) return;
   if (e.target.closest('input[type="range"]')) return;
   if (e.target.closest('.progress-bar-wrap')) return;
@@ -263,7 +264,6 @@ videoWrap.addEventListener('click', (e) => {
     clearTimeout(tapTimer);
     tapCount = 0;
     togglePlayPause();
-    bigPlay.classList.add('show');
     videoWrap.classList.add('controls-visible');
     startHideTimer();
   }
@@ -577,7 +577,6 @@ async function checkSharedUrl() {
     }).catch(() => {
       state.isPlaying = false;
       updatePlayPauseIcon();
-      bigPlay.classList.add('show');
     });
   }, 800);
   history.replaceState({}, '', location.pathname);
