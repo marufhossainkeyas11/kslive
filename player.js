@@ -538,6 +538,11 @@ function loadStream(ch, forceProxy = false) {
         setStatus('Paused', 'yellow');
       });
     });
+     
+    hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
+      const lv = hls.levels[data.level];
+      if (lv?.height) qualityBadge.textContent = `${lv.height}p`;
+    });
 
     hls.on(Hls.Events.ERROR, (e, data) => {
       const isHttpBlock = data.response && (data.response.code === 503 || data.response.code === 403);
