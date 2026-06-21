@@ -296,7 +296,6 @@ async function init() {
         }).catch(() => {
           state.isPlaying = false;
           updatePlayPauseIcon();
-          if(!state.isPlaying) bigPlay.classList.add('show');
         });
       }, 1000);
     }, 500);
@@ -351,7 +350,7 @@ function buildPlaylistTabs() {
 function switchPlaylist(idx) {
   state.activePlaylist = idx;
   state.channels = state.playlists[idx]?.channels || [];
-  // state.currentIdx = -1;
+  state.currentIdx = -1;
   document.querySelectorAll('.pl-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
   state.activeGroup = 'All';
   buildGroupFilters();
@@ -666,7 +665,6 @@ bigPlay.addEventListener('click', (e) => {
     videoEl.play().then(() => {
       state.isPlaying = true;
       updatePlayPauseIcon();
-      setTimeout(() => {if(state.isPlaying) bigPlay.classList.remove('show');}, 700);
     }).catch(() => {});
   }
 });
