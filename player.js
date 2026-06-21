@@ -296,6 +296,7 @@ async function init() {
         }).catch(() => {
           state.isPlaying = false;
           updatePlayPauseIcon();
+          bigPlay.classList.add('show');
         });
       }, 1000);
     }, 500);
