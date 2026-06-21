@@ -266,7 +266,7 @@ videoWrap.addEventListener('click', (e) => {
     togglePlayPause();
     $('bigPlayIcon').querySelector('path').setAttribute('d', state.isPlaying ? PAUSE_PATH : PLAY_PATH);
     bigPlay.classList.add('show');
-    setTimeout(() => bigPlay.classList.remove('show'), 700);
+    setTimeout(() => {if(state.isPlaying) bigPlay.classList.remove('show');}, 700);
     videoWrap.classList.add('controls-visible');
     startHideTimer();
   }
