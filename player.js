@@ -654,6 +654,17 @@ $('progressWrap').addEventListener('click', e => {
   videoEl.currentTime = ((e.clientX - rect.left) / rect.width) * videoEl.duration;
 });
 
+bigPlay.addEventListener('click', (e) => {
+  e.stopPropagation(); 
+  if (videoEl.paused) {
+    videoEl.play().then(() => {
+      state.isPlaying = true;
+      updatePlayPauseIcon();
+      setTimeout(() => {if(state.isPlaying) bigPlay.classList.remove('show');}, 700);
+    }).catch(() => {});
+  }
+});
+
 /* ═══════════════════════════════════════════════════════
    BOOT
    ═══════════════════════════════════════════════════════ */
