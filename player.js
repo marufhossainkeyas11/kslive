@@ -624,13 +624,16 @@ videoEl.addEventListener('playing', () => {
   $('bufferSpinner').style.display = 'none';
 });
 videoEl.addEventListener('waiting', () => {
+  bigPlay.classList.remove('show');
   setStatus('Buffering…', 'yellow');
   $('bufferSpinner').style.display = 'block';
 });
 videoEl.addEventListener('canplay', () => { $('bufferSpinner').style.display = 'none'; });
-videoEl.addEventListener('pause', () => { state.isPlaying = false;
+videoEl.addEventListener('pause', () => {
+  state.isPlaying = false;
   updatePlayPauseIcon();
-  setStatus('Paused', 'yellow'); });
+  setStatus('Paused', 'yellow'); 
+});
 videoEl.addEventListener('error', () => {
   if (state.currentIdx === -1) return;
   if (state.retryCount < state.MAX_RETRY) {
