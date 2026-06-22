@@ -24,11 +24,11 @@
     "url": "https://raw.githubusercontent.com/srhady/tapmad-bd/refs/heads/main/tapmad_bd.m3u"
   },
   {
-    "name": "Willow (Premium)",
-    "url": "https://raw.githubusercontent.com/srhady/willow-event/refs/heads/main/live_sports.m3u"
-  },
-  {
     "name": "Fancode Sports (Premium)",
     "url": "https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u"
+  },
+  {
+    "name": "Axsports (Sports)",
+    "url": "https://raw.githubusercontent.com/srhady/axsports/refs/heads/main/playlist.m3u"
   }
 ]
