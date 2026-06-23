@@ -516,6 +516,23 @@ async function verifyShareToken(chName, playlistIdx, ts, sig) {
   return hex === sig;
 }
 
+async function shortenUrl(longUrl, customAlias = '') {
+  try {
+    const alias = customAlias || '';
+    const params = new URLSearchParams({
+      format: 'simple',
+      url: longUrl,
+      ...(alias && { shorturl: alias })
+    });
+    const res = await fetch(`https://v.gd/create.php?${params}`);
+    if (!res.ok) throw new Error();
+    const short = await res.text();
+    return short.startsWith('http') ? short : longUrl;
+  } catch {
+    return longUrl;
+  }
+}
+
 async function shareChannel() {
   if (state.currentIdx === -1) { showToast('No channel is playing'); return; }
   const ch = state.channels[state.currentIdx];
@@ -523,7 +540,8 @@ async function shareChannel() {
   const chHash = await nameToHash(ch.name);
   const { ts, sig } = await genShareToken(ch.name, state.activePlaylist);
   const base = location.origin + location.pathname;
-  const url = `${base}?ch=${chHash}&pl=${state.activePlaylist}&t=${ts}&sig=${sig}`;
+  const longUrl = `${base}?ch=${chHash}&pl=${state.activePlaylist}&t=${ts}&sig=${sig}`;
+  const url = await shortenUrl(longUrl);
 
   const shareText =
 `🔴 LIVE NOW on KSLIVE
