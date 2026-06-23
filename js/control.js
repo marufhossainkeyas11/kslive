@@ -546,7 +546,8 @@ async function shareChannel() {
 🆓 Free • No login required
 ⏳ Link expires in 6 hours
 
-Watch now 👇`;
+Watch now 👇
+Link 🔗`;
 
   if (navigator.share) {
     try {
