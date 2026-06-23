@@ -17,12 +17,12 @@
   {
     "name": "FIFA LIVE (Auto update on occasion)",
     "url": "https://raw.githubusercontent.com/srhady/axsports/refs/heads/main/playlist.m3u",
-    "image": ""
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Fifa_2026.png"
   },
   {
     "name": "Akash Go (Reliable)",
     "url": "https://raw.githubusercontent.com/srhady/Hady/refs/heads/main/akash_live.m3u",
-    "image": ""
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Akash_Go.png"
   },
   {
     "name": "Tapmad Sports (Premium)",
