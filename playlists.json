@@ -1,7 +1,8 @@
 [
   {
     "name": "Bangladeshi All",
-    "url": "https://raw.githubusercontent.com/shamimpipon/Shamim-live-tv/refs/heads/main/Channel.m3u"
+    "url": "https://raw.githubusercontent.com/shamimpipon/Shamim-live-tv/refs/heads/main/Channel.m3u",
+    "image": ""
   },
   {
     "name": "Toffee (Premium)",
@@ -9,27 +10,33 @@
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png"
   },
   {
-    "name": "FiFaWorldCup with Toffee (Reliable)",
-    "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/m3u/toffee_worldcup.m3u"
+    "name": "All BD (Reliable) (ISP Sensitive)",
+    "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/ts.m3u",
+    "image": ""
   },
   {
-    "name": "FIFA LIVE (Auto update on occasion)",
-    "url": "https://raw.githubusercontent.com/srhady/axsports/refs/heads/main/playlist.m3u"
+    "name": "120+ FIFA LIVE (Choose the best)",
+    "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/120%2B%20FIFA%20LIVE.m3u",
+    "image": ""
   },
   {
     "name": "Akash Go (Reliable)",
-    "url": "https://raw.githubusercontent.com/srhady/Hady/refs/heads/main/akash_live.m3u"
+    "url": "https://raw.githubusercontent.com/srhady/Hady/refs/heads/main/akash_live.m3u",
+    "image": ""
   },
   {
     "name": "Tapmad Sports (Premium)",
-    "url": "https://raw.githubusercontent.com/srhady/tapmad-bd/refs/heads/main/tapmad_bd.m3u"
+    "url": "https://raw.githubusercontent.com/srhady/tapmad-bd/refs/heads/main/tapmad_bd.m3u",
+    "image": ""
+  },
+  {
+    "name": "Willow (Premium)",
+    "url": "https://raw.githubusercontent.com/srhady/willow-event/refs/heads/main/live_sports.m3u",
+    "image": ""
   },
   {
     "name": "Fancode Sports (Premium)",
-    "url": "https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u"
-  },
-  {
-    "name": "Axsports (Sports)",
-    "url": "https://raw.githubusercontent.com/srhady/axsports/refs/heads/main/playlist.m3u"
+    "url": "https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u",
+    "image": ""
   }
 ]
