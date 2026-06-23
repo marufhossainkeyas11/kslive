@@ -12,7 +12,7 @@
   {
     "name": "FiFaWorldCup with Toffee (Reliable)",
     "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/m3u/toffee_worldcup.m3u",
-    "image": ""
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee_%26_fifa.png"
   },
   {
     "name": "FIFA LIVE (Auto update on occasion)",
@@ -37,6 +37,6 @@
   {
     "name": "Axsports (Sports)",
     "url": "https://raw.githubusercontent.com/srhady/axsports/refs/heads/main/playlist.m3u",
-    "image": ""
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/axsports.jpg"
   }
 ]
