@@ -334,13 +334,21 @@ plScrollRight.addEventListener('click', () => {
 playlistTabs.addEventListener('scroll', updatePlScrollButtons);
 window.addEventListener('resize', updatePlScrollButtons);
 
-// buildPlaylistTabs() এর শেষে এটা কল করো
 function buildPlaylistTabs() {
   playlistTabs.innerHTML = '';
   state.playlists.forEach((pl, idx) => {
     const tab = document.createElement('button');
     tab.className = 'pl-tab' + (idx === 0 ? ' active' : '');
-    tab.innerHTML = `<span class="live-dot"></span>${escHtml(pl.name)}<span class="pl-count">${pl.channels.length}</span>`;
+    
+    const imgHtml = pl.image
+      ? `<img class="pl-tab-img" src="${escAttr(pl.image)}" alt="" onerror="this.style.display='none'">`
+      : `<div class="pl-tab-img pl-tab-img-fallback">${escHtml(pl.name.substring(0,2).toUpperCase())}</div>`;
+    
+    tab.innerHTML = `
+      ${imgHtml}
+      <span class="pl-tab-name">${escHtml(pl.name)}</span>
+      <span class="pl-count">${pl.channels.length}</span>
+    `;
     tab.addEventListener('click', () => switchPlaylist(idx));
     playlistTabs.appendChild(tab);
   });
@@ -352,6 +360,12 @@ function switchPlaylist(idx) {
   state.channels = state.playlists[idx]?.channels || [];
   state.currentIdx = -1;
   document.querySelectorAll('.pl-tab').forEach((t, i) => t.classList.toggle('active', i === idx));
+  
+  const activeTab = playlistTabs.querySelectorAll('.pl-tab')[idx];
+  if (activeTab) {
+    activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+  
   state.activeGroup = 'All';
   buildGroupFilters();
   applyFilter();
