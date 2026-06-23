@@ -397,62 +397,60 @@ mobileSidebarBtn.addEventListener('click', () => {
 function showPlaylistPopup() {
   const existing = document.getElementById('plPopup');
   const existingBd = document.getElementById('plBackdrop');
-  if (existing) { existing.remove();
-    existingBd?.remove(); return; }
-  
+  if (existing) { existing.remove(); existingBd?.remove(); return; }
+
   const backdrop = document.createElement('div');
   backdrop.id = 'plBackdrop';
   backdrop.style.cssText = 'position:fixed;inset:0;z-index:199;background:rgba(0,0,0,0.5);';
-  
+
   const popup = document.createElement('div');
   popup.id = 'plPopup';
-  popup.style.cssText = `
-    position:fixed;bottom:0;left:0;right:0;z-index:200;
-    background:var(--bg2);border-top:1px solid var(--bdr);
-    border-radius:16px 16px 0 0;padding:12px 0 24px;
-    box-shadow:0 -8px 32px rgba(0,0,0,0.4);
-    animation:slideUp 0.25s ease;
-  `;
-  
-  function closePopup() { popup.remove();
-    backdrop.remove(); }
+  popup.className = 'pl-popup-sheet';
+
+  function closePopup() { popup.remove(); backdrop.remove(); }
   backdrop.addEventListener('click', closePopup);
-  
+
   const title = document.createElement('div');
-  title.style.cssText = `
-    font-size:12px;font-weight:700;letter-spacing:1.5px;
-    text-transform:uppercase;color:var(--t3);
-    padding:4px 20px 12px;font-family:var(--m);
-    border-bottom:1px solid var(--bdr);margin-bottom:8px;
-  `;
+  title.className = 'pl-popup-title';
   title.textContent = 'SELECT PLAYLIST';
   popup.appendChild(title);
-  
+
+  const list = document.createElement('div');
+  list.className = 'pl-popup-list';
+
   state.playlists.forEach((pl, idx) => {
+    const isActive = idx === state.activePlaylist;
     const row = document.createElement('div');
-    row.style.cssText = `
-      display:flex;align-items:center;gap:12px;
-      padding:12px 20px;cursor:pointer;transition:background 0.15s;
-      background:${idx === state.activePlaylist ? 'rgba(21,101,192,0.15)' : 'transparent'};
-    `;
+    row.className = 'pl-popup-row' + (isActive ? ' active' : '');
+
+    const imgHtml = pl.image
+      ? `<img class="pl-popup-img" src="${escAttr(pl.image)}" alt="" onerror="this.style.display='none'">`
+      : `<div class="pl-popup-img pl-popup-img-fallback">${escHtml(pl.name.substring(0,2).toUpperCase())}</div>`;
+
     row.innerHTML = `
-      <div style="width:8px;height:8px;border-radius:50%;
-        background:${idx === state.activePlaylist ? 'var(--blue3)' : 'var(--t3)'};flex-shrink:0"></div>
-      <div style="flex:1">
-        <div style="font-size:14px;font-weight:500;color:var(--text)">${escHtml(pl.name)}</div>
-        <div style="font-size:11px;color:var(--t2);font-family:var(--m)">${pl.channels.length} channels</div>
+      ${imgHtml}
+      <div class="pl-popup-info">
+        <div class="pl-popup-name">${escHtml(pl.name)}</div>
+        <div class="pl-popup-count">${pl.channels.length} channels</div>
       </div>
-      ${idx === state.activePlaylist ? '<div style="font-size:16px">✓</div>' : ''}
+      <div class="pl-popup-check">
+        <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
+          <polyline points="2,6 5,9 10,3" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
     `;
+
     row.addEventListener('click', () => {
       switchPlaylist(idx);
       closePopup();
       updateMobilePlaylistBtn();
       if (window.innerWidth <= 768) sidebar.classList.add('mobile-open');
     });
-    popup.appendChild(row);
+
+    list.appendChild(row);
   });
-  
+
+  popup.appendChild(list);
   document.body.appendChild(backdrop);
   document.body.appendChild(popup);
 }
