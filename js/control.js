@@ -516,15 +516,11 @@ async function verifyShareToken(chName, playlistIdx, ts, sig) {
   return hex === sig;
 }
 
-async function shortenUrl(longUrl, customAlias = '') {
+async function shortenUrl(longUrl) {
   try {
-    const alias = customAlias || '';
-    const params = new URLSearchParams({
-      format: 'simple',
-      url: longUrl,
-      ...(alias && { shorturl: alias })
-    });
-    const res = await fetch(`https://v.gd/create.php?${params}`);
+    const res = await fetch(
+      `https://round-bonus-4d76.marufhossainkeyas.workers.dev/?url=${encodeURIComponent(longUrl)}`
+    );
     if (!res.ok) throw new Error();
     const short = await res.text();
     return short.startsWith('http') ? short : longUrl;
