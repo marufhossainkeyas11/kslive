@@ -623,8 +623,9 @@ video {
   transition: all 0.15s ease;
   opacity: 0;
   transform: scale(0.8);
+  pointer-events: none;
 }
-.big-play.show { opacity: 1; transform: scale(1); }
+.big-play.show { opacity: 1; transform: scale(1); pointer-events: auto; }
 
 /* Channel info overlay (top) */
 .now-playing-bar {
