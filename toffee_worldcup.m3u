@@ -1,11 +1,11 @@
 #EXTM3U
-#EXTINF:-1,CH1
+#EXTINF:-1, FIFAworldCup2026 CH1
 https://cdn-tt.pages.dev/ch1.m3u8
-#EXTINF:-1,CH2
+#EXTINF:-1, FIFAworldCup2026 CH2
 https://cdn-tt.pages.dev/ch2.m3u8
-#EXTINF:-1,CH3
+#EXTINF:-1, FIFAworldCup2026 CH3
 https://cdn-tt.pages.dev/ch3.m3u8
-#EXTINF:-1,CH4
+#EXTINF:-1, FIFAworldCup2026 CH4
 https://cdn-tt.pages.dev/ch4.m3u8
-#EXTINF:-1,CH5
+#EXTINF:-1, FIFAworldCup2026 CH5
 https://cdn-tt.pages.dev/ch5.m3u8
