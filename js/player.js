@@ -268,7 +268,7 @@ async function init() {
   const results = await Promise.allSettled(
     PLAYLISTS.map(async (pl) => {
       const text = await fetchM3U(pl);
-      return { name: pl.name, channels: parseM3U(text) };
+      return { name: pl.name, image: pl.image || '', channels: parseM3U(text) };
     })
   );
   
