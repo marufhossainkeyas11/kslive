@@ -1,54 +1,78 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="dark">
-
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KEYASLIVE — tv chanels for free</title>
+  <title>KSLIVE — Free Live TV Streaming</title>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+
   <meta name="google-site-verification" content="exsIHrvobdrnubpQyM74xkcOP8VdjYaUUXF3DKQacLo" />
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
   <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22KSLIVE%22%2C%22short_name%22%3A%22KSLIVE%22%2C%22description%22%3A%22Free%20TV%20channels%20live%20streaming%22%2C%22start_url%22%3A%22.%2F%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%220d1117%22%2C%22theme_color%22%3A%221565C0%22%2C%22orientation%22%3A%22normal%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22.%2Fkslive.svg%22%2C%22sizes%22%3A%22any%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%2C%22purpose%22%3A%22any%20maskable%22%7D%5D%7D">
   <meta name="theme-color" content="#1565C0">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capabl e" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="KSLIVE">
+
+  <link rel="icon" type="image/svg+xml" href="./image/kslive.svg">
   <link rel="apple-touch-icon" href="./image/kslive.svg">
 
-  <!-- Primary Meta -->
+  <!-- SEO: Primary Meta -->
   <meta name="title" content="KSLIVE — Free Live TV Streaming">
   <meta name="description" content="Watch 119+ live TV channels for free. Sports, Movies, News, Bangla & more. No login required. Works as PWA on Android & iOS.">
-  
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://marufhossainkeyas11.github.io/kslive/">
+
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://marufhossainkeyas11.github.io/kslive/">
   <meta property="og:title" content="KSLIVE — Free Live TV Streaming">
   <meta property="og:description" content="Watch 119+ live TV channels for free. Sports, Movies, News, Bangla & more. No login required.">
   <meta property="og:image" content="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/ogimage.png">
-  
+
   <!-- Twitter Card -->
-  <meta property="twitter:card" content="summary_large_image">
-  <meta property="twitter:url" content="https://marufhossainkeyas11.github.io/kslive/">
-  <meta property="twitter:title" content="KSLIVE — Free Live TV Streaming">
-  <meta property="twitter:description" content="Watch 119+ live TV channels for free. Sports, Movies, News, Bangla & more. No login required.">
-  <meta property="twitter:image" content="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/ogimage.png">
-  
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="https://marufhossainkeyas11.github.io/kslive/">
+  <meta name="twitter:title" content="KSLIVE — Free Live TV Streaming">
+  <meta name="twitter:description" content="Watch 119+ live TV channels for free. Sports, Movies, News, Bangla & more. No login required.">
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/ogimage.png">
+
+  <!-- Structured Data: Product/App signal for Google -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "KSLIVE",
+    "url": "https://marufhossainkeyas11.github.io/kslive/",
+    "description": "Watch 119+ live TV channels for free. Sports, Movies, News, Bangla & more. No login required. Works as PWA on Android & iOS.",
+    "applicationCategory": "EntertainmentApplication",
+    "operatingSystem": "Web, Android, iOS",
+    "softwareVersion": "1.9.3",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "BDT"
+    },
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/ogimage.png"
+  }
+  </script>
+
   <link rel="stylesheet" href="./css/style.css">
   <script>
     if ('serviceWorker' in navigator) {
       const SW_SRC = `
         const CACHE = 'kslive-v2';
         const STATIC = ['./kslive.svg'];
-    
-        /* ── Install: শুধু icon cache ── */
+
         self.addEventListener('install', e => {
           e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)));
           self.skipWaiting();
         });
-    
-        /* ── Activate: পুরনো cache সাফ ── */
+
         self.addEventListener('activate', e => {
           e.waitUntil(
             caches.keys()
@@ -56,21 +80,18 @@
           );
           self.clients.claim();
         });
-    
-        /* ── Fetch: performance-first strategy ── */
+
         self.addEventListener('fetch', e => {
           const req = e.request;
           const url = new URL(req.url);
-    
-          /* 1. SVG icon → cache first */
+
           if (url.pathname.endsWith('.svg')) {
             e.respondWith(
               caches.match(req).then(r => r || fetch(req))
             );
             return;
           }
-    
-          /* 2. M3U / stream / external → নেটওয়ার্কই ভরসা, SW হাত দেবে না */
+
           if (
             url.hostname !== self.location.hostname ||
             url.pathname.includes('.m3u') ||
@@ -81,45 +102,41 @@
             e.respondWith(fetch(req));
             return;
           }
-    
-          /* 3. Same-origin assets (css, js) → network-first, fast fallback */
+
           e.respondWith(
             fetch(req, { priority: 'high' })
               .then(res => {
-                /* fresh copy background-এ cache করো */
                 if (res.ok) {
                   const clone = res.clone();
                   caches.open(CACHE).then(c => c.put(req, clone));
                 }
                 return res;
               })
-              .catch(() => caches.match(req)) /* offline হলে cached version */
+              .catch(() => caches.match(req))
           );
         });
-    
-        /* ── Message: client থেকে skipWaiting চাইলে ── */
+
         self.addEventListener('message', e => {
           if (e.data === 'SKIP_WAITING') self.skipWaiting();
         });
-    
-        /* ── Online/Offline: সব client কে জানাও ── */
+
         self.addEventListener('online',  () => notifyClients('ONLINE'));
         self.addEventListener('offline', () => notifyClients('OFFLINE'));
-    
+
         function notifyClients(type) {
           self.clients.matchAll({ includeUncontrolled: true }).then(clients =>
             clients.forEach(c => c.postMessage({ type }))
           );
         }
       `;
-    
+
       const blob   = new Blob([SW_SRC], { type: 'application/javascript' });
       const swUrl  = URL.createObjectURL(blob);
-    
+
       navigator.serviceWorker.register(swUrl, { scope: './' })
         .then(reg => {
           console.log('SW registered');
-    
+
           reg.addEventListener('updatefound', () => {
             reg.installing?.addEventListener('statechange', function () {
               if (this.state === 'installed' && navigator.serviceWorker.controller) {
@@ -129,7 +146,7 @@
           });
         })
         .catch(e => console.warn('SW failed:', e));
-    
+
       navigator.serviceWorker.addEventListener('message', ({ data }) => {
         if (data?.type === 'OFFLINE') {
           showToast("⚠️ No internet — stream won't load", 5000);
