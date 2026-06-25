@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://marufhossainkeyas11.github.io/kslive/sitemap.xml
