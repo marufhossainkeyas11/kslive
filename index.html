@@ -120,7 +120,6 @@
         .then(reg => {
           console.log('SW registered');
     
-          /* নতুন SW পাওয়া গেলে auto-activate */
           reg.addEventListener('updatefound', () => {
             reg.installing?.addEventListener('statechange', function () {
               if (this.state === 'installed' && navigator.serviceWorker.controller) {
@@ -131,7 +130,6 @@
         })
         .catch(e => console.warn('SW failed:', e));
     
-      /* SW থেকে online/offline message ধরো */
       navigator.serviceWorker.addEventListener('message', ({ data }) => {
         if (data?.type === 'OFFLINE') {
           showToast("⚠️ No internet — stream won't load", 5000);
