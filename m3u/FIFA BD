@@ -1,0 +1,7 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="TSports" tvg-name="T Sports" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/T_Sports_logo.svg/1280px-T_Sports_logo.svg.png" group-title="Sports",T Sports
+http://198.195.239.50:8095/tsports/index.m3u8
+#EXTINF:-1 tvg-id="SomoyTV" tvg-name="Somoy TV" tvg-logo="http://198.195.239.50/img/channels/SOMOY%20TV.png" group-title="News",Somoy TV
+http://198.195.239.50:8095/somoyTv/index.m3u8
+#EXTINF:-1 tvg-id="BTV" tvg-name="BTV" tvg-logo="http://198.195.239.50/img/channels/BTV.HD.png" group-title="General",BTV
+http://198.195.239.50:8095/btv/index.m3u8
