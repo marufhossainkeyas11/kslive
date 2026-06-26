@@ -20,7 +20,8 @@ function buildProxyUrl(targetUrl, headers = {}) {
 
 function resolveStreamUrl(ch) {
   const hdrs = ch.compiledHeaders || {};
-  const needsProxy = Object.keys(hdrs).length > 0;
+  const isMixedContent = location.protocol === 'https:' && ch.url.startsWith('http://');
+  const needsProxy = Object.keys(hdrs).length > 0 || isMixedContent;
   if (!needsProxy) return ch.url; 
   return buildProxyUrl(ch.url, hdrs);
 }
@@ -510,8 +511,9 @@ function loadStream(ch, forceProxy = false) {
 
   const hdrs = ch.compiledHeaders || {};
   const hasHeaders = Object.keys(hdrs).length > 0;
-  const url = (forceProxy || hasHeaders) ? buildProxyUrl(ch.url, hdrs) : ch.url;
-
+  const isMixedContent = location.protocol === 'https:' && ch.url.startsWith('http://');
+  const url = (forceProxy || hasHeaders || isMixedContent) ? buildProxyUrl(ch.url, hdrs) : ch.url;
+  
   if (Hls.isSupported()) {
     const hls = new Hls({
       xhrSetup: (xhr) => {
