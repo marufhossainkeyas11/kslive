@@ -1,7 +1,34 @@
 #EXTM3U
-#EXTINF:-1 tvg-id="TSports" tvg-name="T Sports" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/T_Sports_logo.svg/1280px-T_Sports_logo.svg.png" group-title="Sports",T Sports
-http://198.195.239.50:8095/tsports/index.m3u8
-#EXTINF:-1 tvg-id="SomoyTV" tvg-name="Somoy TV" tvg-logo="http://198.195.239.50/img/channels/SOMOY%20TV.png" group-title="News",Somoy TV
-http://198.195.239.50:8095/somoyTv/index.m3u8
-#EXTINF:-1 tvg-id="BTV" tvg-name="BTV" tvg-logo="http://198.195.239.50/img/channels/BTV.HD.png" group-title="General",BTV
-http://198.195.239.50:8095/btv/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria (720p) - 1
+https://as.voodevon.xyz/noozile2_720/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria (720p) - 2
+https://ex.moorarts.xyz/diluoe1_720/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria (Auto) - 3
+https://ex.moorarts.xyz/diluoe1.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria - 4
+https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria - 5
+https://pub-e3eb43d02df647099f49525f20574746.r2.dev/BMax1-2/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria (DSports2)
+https://streamvidex.qzz.io/videx/dsports2/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina (480p)
+https://ex.moorarts.xyz/diluoe1_480/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina (720p)
+https://ex.moorarts.xyz/diluoe1_720/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina (Auto)
+https://ex.moorarts.xyz/diluoe1.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina - 4
+https://1nyaler.streamhostingcdn.top/stream/21/index.m3u8
+
+#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina (DSports)
+https://streamvidex.qzz.io/videx/dsports/index.m3u8
