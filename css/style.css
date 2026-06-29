@@ -878,10 +878,15 @@ video {
   border-radius: 12px;
   padding: 6px;
   min-width: 200px;
+  max-height: calc(var(--video-h, 56.25vw) - 48px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
   box-shadow: 0 8px 32px rgba(0,0,0,0.6);
   z-index: 20;
   animation: popIn 0.15s ease;
 }
+.more-popup::-webkit-scrollbar { display: none; }
 .more-popup.open { display: block; }
 
 @keyframes popIn {
@@ -910,6 +915,154 @@ video {
   height: 1px;
   background: rgba(255,255,255,0.07);
   margin: 4px 6px;
+}
+/* ── MORE POPUP — SLIDE PANELS ── */
+.more-popup-inner {
+  overflow: visible;
+  position: relative;
+}
+
+.more-panel {
+  width: 100%;
+  transition: transform 0.28s cubic-bezier(0.4,0,0.2,1),
+              opacity   0.28s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Main panel: default visible */
+.more-panel-main {
+  transform: translateX(0);
+  opacity: 1;
+}
+/* Sub panel: hidden to the right */
+.more-panel-sub {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  transform: translateX(100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Slide state: main → left, sub → center */
+.more-popup-inner.sub-open .more-panel-main {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+  max-height: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+}
+.more-popup-inner.sub-open .more-panel-sub {
+  transform: translateX(0);
+  opacity: 1;
+  pointer-events: all;
+  position: relative;
+}
+
+/* Sub panel header */
+.more-sub-hd {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 6px;
+}
+.more-sub-back {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.55);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px 4px 2px 0;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.more-sub-back:hover { color: #fff; }
+.more-sub-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+}
+
+/* Quality option rows */
+.more-qual-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 2px;
+}
+.more-qual-row:hover { background: rgba(255,255,255,0.09); }
+.more-qual-row.active { background: rgba(33,150,243,0.15); }
+
+.more-qual-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.more-qual-row.active .more-qual-dot {
+  background: var(--blue3);
+  border-color: var(--blue3);
+  box-shadow: 0 0 6px rgba(33,150,243,0.6);
+}
+
+.more-qual-label {
+  font-size: 13px;
+  color: rgba(255,255,255,0.75);
+  flex: 1;
+}
+.more-qual-row.active .more-qual-label {
+  color: #fff;
+  font-weight: 600;
+}
+.more-qual-badge {
+  font-family: var(--m);
+  font-size: 9px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.07);
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.05em;
+}
+.more-qual-row.active .more-qual-badge {
+  background: rgba(33,150,243,0.2);
+  color: var(--blue3);
+}
+
+/* Quality row in main panel */
+.more-qual-trigger {
+  cursor: pointer;
+  justify-content: space-between;
+}
+.more-qual-trigger .more-popup-label { flex: 1; }
+.more-qual-trigger-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.more-qual-current {
+  font-family: var(--m);
+  font-size: 10px;
+  color: var(--blue3);
+  background: rgba(33,150,243,0.14);
+  border: 1px solid rgba(33,150,243,0.22);
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+.more-popup-row.disabled-row {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: default;
 }
 
 /* ── SPEED INDICATOR ── */
