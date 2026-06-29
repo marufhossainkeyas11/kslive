@@ -297,7 +297,7 @@ morePopup.addEventListener('click', e => e.stopPropagation());
    ═══════════════════════════════════════════════════════ */
 function syncControlLayout() {
   const isMobile = window.innerWidth <= 450;
-  const isTiny = window.innerWidth <= 300;
+  const isTiny = window.innerWidth <= 360;
   
   $('volSlider').style.display = isMobile ? 'none' : '';
   $('pipBtn').style.display = isMobile ? 'none' : (document.pictureInPictureEnabled ? '' : 'none');
@@ -313,7 +313,7 @@ function syncControlLayout() {
     pipRow.style.display = 'flex'; // দেখায়, কিন্তু dim থাকবে
   }
   
-  // Fullscreen row — শুধু ≤300px এ more popup এ দেখায়
+  // Fullscreen row — শুধু ≤360px এ more popup এ দেখায়
   const fsRow = $('moreFullscreenRow');
   if (fsRow) {
     fsRow.style.display = isTiny ? 'flex' : 'none';
