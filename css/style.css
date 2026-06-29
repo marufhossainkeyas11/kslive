@@ -59,6 +59,7 @@ body {
   background: var(--bg);
   color: var(--text);
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -604,6 +605,7 @@ body {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg);
+  min-height: 0;
 }
 
 /* ── VIDEO WRAP ── */
@@ -980,6 +982,7 @@ video {
   padding: 16px 20px;
   scrollbar-width: thin;
   scrollbar-color: var(--sf2) transparent;
+  min-height: 0;
 }
 
 .ch-detail-header {
@@ -1034,8 +1037,10 @@ video {
   font-family: var(--m);
   font-size: 10.5px;
   color: var(--t3);
-  flex-shrink: 0;
+  flex-shrink: 0;     
+  flex-basis: 28px;     
   overflow: hidden;
+  margin-top: auto; 
 }
 .status-item {
   display: flex; align-items: center;
