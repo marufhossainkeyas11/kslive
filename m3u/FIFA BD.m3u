@@ -1,34 +1,15 @@
 #EXTM3U
-
-#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria (720p) - 1
-https://as.voodevon.xyz/noozile2_720/index.m3u8
-
-#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria (720p) - 2
-https://ex.moorarts.xyz/diluoe1_720/index.m3u8
-
-#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria (Auto) - 3
-https://ex.moorarts.xyz/diluoe1.m3u8
-
-#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria - 4
+#EXTINF:-1 tvg-logo="" group-title="Category 1", Server - 4
 https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8
 
-#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria - 5
+#EXTINF:-1 tvg-logo="" group-title="Category 1", Server - 5
 https://pub-e3eb43d02df647099f49525f20574746.r2.dev/BMax1-2/index.m3u8
 
-#EXTINF:-1 tvg-logo="" group-title="Algeria VS Austria",Algeria VS Austria (DSports2)
+#EXTINF:-1 tvg-logo="" group-title="Category 1", Server (DSports2)
 https://streamvidex.qzz.io/videx/dsports2/index.m3u8
 
-#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina (480p)
-https://ex.moorarts.xyz/diluoe1_480/index.m3u8
-
-#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina (720p)
-https://ex.moorarts.xyz/diluoe1_720/index.m3u8
-
-#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina (Auto)
-https://ex.moorarts.xyz/diluoe1.m3u8
-
-#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina - 4
+#EXTINF:-1 tvg-logo="" group-title="Category 2", Server - 4
 https://1nyaler.streamhostingcdn.top/stream/21/index.m3u8
 
-#EXTINF:-1 tvg-logo="" group-title="Jordan VS Argentina",Jordan VS Argentina (DSports)
+#EXTINF:-1 tvg-logo="" group-title="Category 2", Server (DSports)
 https://streamvidex.qzz.io/videx/dsports/index.m3u8
