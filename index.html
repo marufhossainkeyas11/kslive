@@ -331,31 +331,82 @@
                 </svg>
               </button>
               <div class="more-popup" id="morePopup">
-                <!-- Volume row (mobile) -->
-                <div class="more-popup-row" id="moreVolRow">
-                  <svg width="21" height="21" viewBox="0 0 16 16" fill="currentColor" style="color:#fff;flex-shrink:0;transform:translateX(-2px)">
-                    <path id="volIcon2" d="M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12zm3.025 4a4.5 4.5 0 0 1-1.318 3.182L10 10.475A3.5 3.5 0 0 0 11.025 8 3.5 3.5 0 0 0 10 5.525l.707-.707A4.5 4.5 0 0 1 12.025 8" />
-                  </svg>
-                  <span class="more-popup-label">Volume</span>
-                  <input class="vol-slider" id="volSliderMobile" type="range" min="0" max="130" step="1" value="100">
-                </div>
-                
-                <div class="more-popup-divider"></div>
-                
-                <!-- PiP -->
-                <div class="more-popup-row" id="pipRow" style="cursor:pointer; color:#fff;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z" />
-                    <path d="M8 8.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5z" />
-                  </svg>
-                  <span class="more-popup-label" style="flex:1">Picture in Picture</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
-                    <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
-                  </svg>
+                <div class="more-popup-inner" id="morePopupInner">
+                  
+                  <!-- ── MAIN PANEL ── -->
+                  <div class="more-panel more-panel-main" id="morePanelMain">
+                    
+                    <!-- Volume row (mobile) -->
+                    <div class="more-popup-row" id="moreVolRow">
+                      <svg width="21" height="21" viewBox="0 0 16 16" fill="currentColor" style="color:#fff;flex-shrink:0;transform:translateX(-2px)">
+                        <path id="volIcon2" d="M9 4a.5.5 0 0 0-.812-.39L5.825 5.5H3.5A.5.5 0 0 0 3 6v4a.5.5 0 0 0 .5.5h2.325l2.363 1.89A.5.5 0 0 0 9 12zm3.025 4a4.5 4.5 0 0 1-1.318 3.182L10 10.475A3.5 3.5 0 0 0 11.025 8 3.5 3.5 0 0 0 10 5.525l.707-.707A4.5 4.5 0 0 1 12.025 8" />
+                      </svg>
+                      <span class="more-popup-label">Volume</span>
+                      <input class="vol-slider" id="volSliderMobile" type="range" min="0" max="130" step="1" value="100">
+                    </div>
+                    
+                    <div class="more-popup-divider"></div>
+                    
+                    <!-- Quality control -->
+                    <div class="more-popup-row more-qual-trigger" id="moreQualRow">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0" />
+                      </svg>
+                      <span class="more-popup-label">Quality</span>
+                      <div class="more-qual-trigger-right">
+                        <span class="more-qual-current" id="moreQualCurrent">AUTO</span>
+                        <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" style="color:rgba(255,255,255,0.35)">
+                          <path d="M6 3l5 5-5 5" />
+                        </svg>
+                      </div>
+                    </div>
+                    
+                    <div class="more-popup-divider"></div>
+                    
+                    <!-- PiP -->
+                    <div class="more-popup-row" id="pipRow" style="cursor:pointer; color:#fff;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z" />
+                        <path d="M8 8.5a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-.5.5h-5a.5.5 0 0 1-.5-.5z" />
+                      </svg>
+                      <span class="more-popup-label" style="flex:1">Picture in Picture</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                      </svg>
+                    </div>
+                    
+                    <!-- Fullscreen -->
+                    <div class="more-popup-row" id="moreFullscreenRow" style="display:none; cursor:pointer; color:#fff;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor">
+                        <path d="M1.5 1a.5.5 0 0 0-.5.5v4a.5.5 0 0 1-1 0v-4A1.5 1.5 0 0 1 1.5 0h4a.5.5 0 0 1 0 1zM10 .5a.5.5 0 0 1 .5-.5h4A1.5 1.5 0 0 1 16 1.5v4a.5.5 0 0 1-1 0v-4a.5.5 0 0 0-.5-.5h-4a.5.5 0 0 1-.5-.5M.5 10a.5.5 0 0 1 .5.5v4a.5.5 0 0 0 .5.5h4a.5.5 0 0 1 0 1h-4A1.5 1.5 0 0 1 0 14.5v-4a.5.5 0 0 1 .5-.5m15 0a.5.5 0 0 1 .5.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a.5.5 0 0 1 0-1h4a.5.5 0 0 0 .5-.5v-4a.5.5 0 0 1 .5-.5" />
+                      </svg>
+                      <span class="more-popup-label" style="flex:1">Fullscreen</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                      </svg>
+                    </div>
+                    
+                  </div>
+                  
+                  <!-- ── QUALITY SUB PANEL ── -->
+                  <div class="more-panel more-panel-sub" id="morePanelQuality">
+                    <div class="more-sub-hd">
+                      <button class="more-sub-back" id="moreQualBack">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2">
+                          <path d="M10 3L5 8l5 5" />
+                        </svg>
+                      </button>
+                      <span class="more-sub-title">Quality</span>
+                    </div>
+                    <div id="moreQualList">
+                      <!-- JS দিয়ে populate হবে -->
+                    </div>
+                  </div>
+                  
                 </div>
               </div>
             </div>
-            
+                        
             <button class="ctrl-btn" id="pipBtn" title="Picture in Picture">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                 <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z" />
