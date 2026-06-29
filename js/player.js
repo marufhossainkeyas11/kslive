@@ -556,9 +556,13 @@ function loadStream(ch, forceProxy = false) {
      
     hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
       const lv = hls.levels[data.level];
-      if (lv?.height) qualityBadge.textContent = `${lv.height}p`;
+      if (lv?.height) {
+        $('qualityBadge').textContent = `${lv.height}p`;
+        const cur = $('moreQualCurrent');
+        if (cur) cur.textContent = `${lv.height}p`;
+      }
+      document.dispatchEvent(new Event('hlsLevelUpdate'));
     });
-
     hls.on(Hls.Events.ERROR, (e, data) => {
       const isHttpBlock = data.response && (data.response.code === 503 || data.response.code === 403);
 
