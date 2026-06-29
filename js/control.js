@@ -297,10 +297,33 @@ morePopup.addEventListener('click', e => e.stopPropagation());
    ═══════════════════════════════════════════════════════ */
 function syncControlLayout() {
   const isMobile = window.innerWidth <= 450;
+  const isTiny = window.innerWidth <= 300;
+  
   $('volSlider').style.display = isMobile ? 'none' : '';
   $('pipBtn').style.display = isMobile ? 'none' : (document.pictureInPictureEnabled ? '' : 'none');
   $('moreBtn').style.display = isMobile ? '' : 'none';
-  $('pipRow').style.display = isMobile && document.pictureInPictureEnabled ? 'flex' : 'none';
+  
+  // PiP row — disabled style if unavailable
+  const pipRow = $('pipRow');
+  if (document.pictureInPictureEnabled) {
+    pipRow.classList.remove('disabled-row');
+    pipRow.style.display = 'flex';
+  } else {
+    pipRow.classList.add('disabled-row');
+    pipRow.style.display = 'flex'; // দেখায়, কিন্তু dim থাকবে
+  }
+  
+  // Fullscreen row — শুধু ≤300px এ more popup এ দেখায়
+  const fsRow = $('moreFullscreenRow');
+  if (fsRow) {
+    fsRow.style.display = isTiny ? 'flex' : 'none';
+    if (isTiny) {
+      fsRow.onclick = () => {
+        morePopup.classList.remove('open');
+        $('fullscreenBtn').click();
+      };
+    }
+  }
 }
 syncControlLayout();
 window.addEventListener('resize', syncControlLayout);
@@ -488,6 +511,135 @@ function checkMobile() {
 window.addEventListener('resize', checkMobile);
 checkMobile();
 
+/* ═══════════════════════════════════════════════════════
+   MORE POPUP — QUALITY CONTROL PANEL
+   ═══════════════════════════════════════════════════════ */
+const morePopupInner = $('morePopupInner');
+
+function openMoreSubPanel(panelId) {
+  morePopupInner.classList.add('sub-open');
+}
+
+function closeMoreSubPanel() {
+  morePopupInner.classList.remove('sub-open');
+  $('moreQualList').innerHTML = '';
+}
+
+function buildQualityList() {
+  const list = $('moreQualList');
+  const hls = state.hls;
+  
+  list.innerHTML = '';
+  
+  if (!hls || !hls.levels || hls.levels.length <= 1) {
+    const msg = document.createElement('div');
+    msg.style.cssText = 'padding:12px 10px; font-size:12px; color:rgba(255,255,255,0.4); text-align:center;';
+    msg.textContent = hls && hls.levels ? 'Only 1 quality available' : 'No stream loaded';
+    list.appendChild(msg);
+    return;
+  }
+  
+  const selectedLevel = state.selectedLevel ?? -1; // default: auto
+  const isAuto = selectedLevel === -1;
+  
+  // AUTO option
+  const autoRow = document.createElement('div');
+  autoRow.className = 'more-qual-row' + (isAuto ? ' active' : '');
+  autoRow.innerHTML = `
+    <div class="more-qual-dot"></div>
+    <span class="more-qual-label">Auto</span>
+    <span class="more-qual-badge">${hls.levels.length}Q</span>
+  `;
+  autoRow.addEventListener('click', () => {
+    state.selectedLevel = -1;
+    hls.currentLevel = -1;
+    updateQualBadge(-1);
+    buildQualityList();
+  });
+  list.appendChild(autoRow);
+  
+  const sorted = hls.levels
+    .map((lv, i) => ({ lv, i }))
+    .sort((a, b) => (b.lv.height || 0) - (a.lv.height || 0));
+  
+  sorted.forEach(({ lv, i }) => {
+    const label = lv.height ? `${lv.height}p` : `Level ${i + 1}`;
+    const bitrate = lv.bitrate ? `${Math.round(lv.bitrate / 1000)}k` : '';
+    const isActive = selectedLevel === i;
+    
+    const row = document.createElement('div');
+    row.className = 'more-qual-row' + (isActive ? ' active' : '');
+    row.innerHTML = `
+      <div class="more-qual-dot"></div>
+      <span class="more-qual-label">${label}</span>
+      ${bitrate ? `<span class="more-qual-badge">${bitrate}</span>` : ''}
+    `;
+    row.addEventListener('click', () => {
+      state.selectedLevel = i;
+      hls.currentLevel = i;
+      updateQualBadge(i);
+      buildQualityList();
+    });
+    list.appendChild(row);
+  });
+}
+
+function updateQualBadge(level) {
+  const hls = state.hls;
+  const badge = $('qualityBadge');
+  const current = $('moreQualCurrent');
+  
+  if (!hls) return;
+  
+  let text;
+  if (level === -1) {
+    const cnt = hls.levels?.length || 0;
+    text = cnt > 1 ? `AUTO · ${cnt}Q` : 'HLS';
+  } else {
+    const lv = hls.levels?.[level];
+    text = lv?.height ? `${lv.height}p` : 'HLS';
+  }
+  
+  badge.textContent = text;
+  if (current) current.textContent = text;
+}
+
+// Quality row trigger
+$('moreQualRow').addEventListener('click', (e) => {
+  e.stopPropagation();
+  buildQualityList();
+  openMoreSubPanel('quality');
+});
+
+$('qualityBadge').style.cursor = 'pointer';
+$('qualityBadge').addEventListener('click', (e) => {
+  e.stopPropagation();
+  
+  morePopup.classList.add('open');
+  
+  buildQualityList();
+  openMoreSubPanel('quality');
+  startHideTimer();
+});
+
+// Back button
+$('moreQualBack').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeMoreSubPanel();
+});
+
+// More popup close → sub panel ও reset হবে
+const origMoreBtn = $('moreBtn');
+document.addEventListener('click', (e) => {
+  if (!morePopup.contains(e.target) && e.target !== origMoreBtn) {
+    closeMoreSubPanel();
+  }
+});
+
+// HLS level switch হলে badge sync
+document.addEventListener('hlsLevelUpdate', () => {
+  if (state.hls) updateQualBadge(state.hls.currentLevel);
+});
 
 /* ═══════════════════════════════════════════════════════
    SHARE — Temporary Expiring Channel Link
