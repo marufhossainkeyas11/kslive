@@ -297,32 +297,36 @@ morePopup.addEventListener('click', e => e.stopPropagation());
    ═══════════════════════════════════════════════════════ */
 function syncControlLayout() {
   const isMobile = window.innerWidth <= 450;
-  const isTiny = window.innerWidth <= 360;
-  
+  const isTiny = window.innerWidth <= 320; 
+
   $('volSlider').style.display = isMobile ? 'none' : '';
   $('pipBtn').style.display = isMobile ? 'none' : (document.pictureInPictureEnabled ? '' : 'none');
   $('moreBtn').style.display = isMobile ? '' : 'none';
-  
-  // PiP row — disabled style if unavailable
+
+  // PiP row
   const pipRow = $('pipRow');
   if (document.pictureInPictureEnabled) {
     pipRow.classList.remove('disabled-row');
     pipRow.style.display = 'flex';
   } else {
     pipRow.classList.add('disabled-row');
-    pipRow.style.display = 'flex'; // দেখায়, কিন্তু dim থাকবে
+    pipRow.style.display = 'flex';
   }
-  
-  // Fullscreen row — শুধু ≤360px এ more popup এ দেখায়
+
+  // Fullscreen — ✅ ≤320px এ popup এ দেখাবে, বাইরেরটা hide
   const fsRow = $('moreFullscreenRow');
+  const fsBtn = $('fullscreenBtn');
   if (fsRow) {
     fsRow.style.display = isTiny ? 'flex' : 'none';
     if (isTiny) {
       fsRow.onclick = () => {
         morePopup.classList.remove('open');
-        $('fullscreenBtn').click();
+        fsBtn.click();
       };
     }
+  }
+  if (fsBtn) {
+    fsBtn.style.display = isTiny ? 'none' : ''; 
   }
 }
 syncControlLayout();
