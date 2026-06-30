@@ -632,7 +632,7 @@ function updateQualBadge(level) {
     const lv = hls.levels?.[runningLevel];
     const cnt = hls.levels?.length || 0;
     if (lv?.height && cnt > 1) {
-      text = `AUTO · ${lv.height}p`;
+      text = `${lv.height}p`;
     } else {
       text = cnt > 1 ? `AUTO · ${cnt}Q` : 'HLS';
     }
