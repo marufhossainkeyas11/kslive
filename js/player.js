@@ -509,6 +509,12 @@ function loadStream(ch, forceProxy = false) {
   setStatus('Connecting…', 'yellow');
   qualityBadge.textContent = 'HLS';
 
+  // Reset subtitle/CC state for the new stream
+  if (typeof closeMoreSubPanel === 'function') closeMoreSubPanel();
+  state.ccTracks = [];
+  state.activeCcId = null;
+  if (typeof refreshCcButtons === 'function') refreshCcButtons();
+
   const hdrs = ch.compiledHeaders || {};
   const hasHeaders = Object.keys(hdrs).length > 0;
   const isMixedContent = location.protocol === 'https:' && ch.url.startsWith('http://');
@@ -563,6 +569,15 @@ function loadStream(ch, forceProxy = false) {
       }
       document.dispatchEvent(new Event('hlsLevelUpdate'));
     });
+
+    // Subtitle tracks become known once the manifest (and any media playlists) are parsed
+    hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
+      document.dispatchEvent(new Event('hlsSubtitleTracksUpdate'));
+    });
+    hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH, () => {
+      document.dispatchEvent(new Event('hlsSubtitleTrackSwitch'));
+    });
+
     hls.on(Hls.Events.ERROR, (e, data) => {
       const isHttpBlock = data.response && (data.response.code === 503 || data.response.code === 403);
 
@@ -605,6 +620,11 @@ function loadStream(ch, forceProxy = false) {
     videoEl.src = url;
     videoEl.play().catch(() => {});
     setStatus('Playing', 'green');
+
+    // Native HLS (Safari/iOS): subtitle tracks surface via the video element's textTracks
+    videoEl.addEventListener('loadedmetadata', () => {
+      if (typeof collectCcTracks === 'function') collectCcTracks();
+    }, { once: true });
   }
 }
 
