@@ -296,24 +296,46 @@ morePopup.addEventListener('click', e => e.stopPropagation());
    CONTROLS — LAYOUT SYNC (mobile vs desktop)
    ═══════════════════════════════════════════════════════ */
 function syncControlLayout() {
-  const isMobile = window.innerWidth <= 450;
-  const isTiny = window.innerWidth <= 320; 
-
-  $('volSlider').style.display = isMobile ? 'none' : '';
-  $('pipBtn').style.display = isMobile ? 'none' : (document.pictureInPictureEnabled ? '' : 'none');
-  $('moreBtn').style.display = isMobile ? '' : 'none';
-
-  // PiP row
+  const isMobile = window.innerWidth <= 450; // volume → popup এ যায়
+  const isTiny = window.innerWidth <= 345; // fullscreen → popup এ যায়
+  const isCcTiny = window.innerWidth <= 490; // CC + PiP → একসাথে popup এ যায়
+  
+  // --- Volume: বাইরে hide হলে popup row হিসেবে দেখাবে ---
+  const volSlider = $('volSlider');
+  const volRow = $('moreVolRow');
+  if (volSlider) volSlider.style.display = isMobile ? 'none' : '';
+  if (volRow) volRow.style.display = isMobile ? 'flex' : 'none';
+  
+  // --- moreBtn: কোনো একটা control popup এ গেলেই দরকার ---
+  $('moreBtn').style.display = (isMobile || isCcTiny) ? '' : 'none';
+  
+  // --- PiP ---
+  const pipBtn = $('pipBtn');
   const pipRow = $('pipRow');
-  if (document.pictureInPictureEnabled) {
-    pipRow.classList.remove('disabled-row');
-    pipRow.style.display = 'flex';
-  } else {
-    pipRow.classList.add('disabled-row');
-    pipRow.style.display = 'flex';
+  const pipSupported = document.pictureInPictureEnabled;
+  if (pipBtn) {
+    pipBtn.style.display = isCcTiny ? 'none' : '';
+    pipBtn.disabled = !pipSupported;
   }
-
-  // Fullscreen — ✅ ≤320px এ popup এ দেখাবে, বাইরেরটা hide
+  if (pipRow) {
+    pipRow.style.display = isCcTiny ? 'flex' : 'none';
+    pipRow.classList.toggle('disabled-row', !pipSupported);
+  }
+  
+  // --- CC ---
+  const ccBtn = $('ccBtn');
+  const ccRow = $('moreCcRow');
+  const ccSupported = state.ccAvailable;
+  if (ccBtn) {
+    ccBtn.style.display = isCcTiny ? 'none' : '';
+    ccBtn.disabled = !ccSupported;
+  }
+  if (ccRow) {
+    ccRow.style.display = isCcTiny ? 'flex' : 'none';
+    ccRow.classList.toggle('disabled-row', !ccSupported);
+  }
+  
+  // --- Fullscreen ---
   const fsRow = $('moreFullscreenRow');
   const fsBtn = $('fullscreenBtn');
   if (fsRow) {
@@ -326,7 +348,7 @@ function syncControlLayout() {
     }
   }
   if (fsBtn) {
-    fsBtn.style.display = isTiny ? 'none' : ''; 
+    fsBtn.style.display = isTiny ? 'none' : '';
   }
 }
 syncControlLayout();
@@ -398,6 +420,7 @@ document.addEventListener('keydown', e => {
     setVolume(v, v === 0); }
   if (e.code === 'KeyF') $('fullscreenBtn').click();
   if (e.code === 'KeyM') $('muteBtn').click();
+  if (e.code === 'KeyC') $('ccBtn').click();
 });
 
 
@@ -516,17 +539,22 @@ window.addEventListener('resize', checkMobile);
 checkMobile();
 
 /* ═══════════════════════════════════════════════════════
-   MORE POPUP — QUALITY CONTROL PANEL
+   MORE POPUP — SUB PANEL NAVIGATION (Quality / CC)
    ═══════════════════════════════════════════════════════ */
 const morePopupInner = $('morePopupInner');
 
 function openMoreSubPanel(panelId) {
+  document.querySelectorAll('.more-panel-sub').forEach(p => p.classList.remove('sub-active'));
+  const target = $(panelId);
+  if (target) target.classList.add('sub-active');
   morePopupInner.classList.add('sub-open');
 }
 
 function closeMoreSubPanel() {
   morePopupInner.classList.remove('sub-open');
+  document.querySelectorAll('.more-panel-sub').forEach(p => p.classList.remove('sub-active'));
   $('moreQualList').innerHTML = '';
+  $('moreCcList').innerHTML = '';
 }
 
 function buildQualityList() {
@@ -612,7 +640,7 @@ function updateQualBadge(level) {
 $('moreQualRow').addEventListener('click', (e) => {
   e.stopPropagation();
   buildQualityList();
-  openMoreSubPanel('quality');
+  openMoreSubPanel('morePanelQuality');
 });
 
 $('qualityBadge').style.cursor = 'pointer';
@@ -622,7 +650,7 @@ $('qualityBadge').addEventListener('click', (e) => {
   morePopup.classList.add('open');
   
   buildQualityList();
-  openMoreSubPanel('quality');
+  openMoreSubPanel('morePanelQuality');
   startHideTimer();
 });
 
@@ -643,6 +671,200 @@ document.addEventListener('click', (e) => {
 // HLS level switch হলে badge sync
 document.addEventListener('hlsLevelUpdate', () => {
   if (state.hls) updateQualBadge(state.hls.currentLevel);
+});
+
+/* ═══════════════════════════════════════════════════════
+   MORE POPUP — SUBTITLE / CC CONTROL PANEL
+   ═══════════════════════════════════════════════════════ */
+state.ccAvailable = false;
+state.ccTracks = [];      // [{ id, name, lang, kind: 'hls'|'native', ref }]
+state.activeCcId = null;  // null = off
+
+function ccLabel(track) {
+  const name = track.name && track.name.trim();
+  const lang = track.lang && track.lang.trim();
+  if (name && lang && name.toLowerCase() !== lang.toLowerCase()) return `${name} (${lang.toUpperCase()})`;
+  return name || (lang ? lang.toUpperCase() : 'Unknown');
+}
+
+function refreshCcButtons() {
+  const ccBtn = $('ccBtn');
+  const ccRow = $('moreCcRow');
+  const cur = $('moreCcCurrent');
+
+  state.ccAvailable = state.ccTracks.length > 0;
+
+  if (ccBtn) {
+    ccBtn.disabled = !state.ccAvailable;
+    ccBtn.classList.toggle('active', state.activeCcId !== null);
+  }
+  if (ccRow) ccRow.classList.toggle('disabled-row', !state.ccAvailable);
+
+  if (cur) {
+    if (!state.ccAvailable) {
+      cur.textContent = 'N/A';
+    } else if (state.activeCcId === null) {
+      cur.textContent = 'OFF';
+    } else {
+      const t = state.ccTracks.find(t => t.id === state.activeCcId);
+      cur.textContent = t ? ccLabel(t).split(' ')[0].toUpperCase().slice(0, 6) : 'ON';
+    }
+  }
+}
+
+// Collect subtitle tracks from current HLS instance + native <track> elements
+function collectCcTracks() {
+  const tracks = [];
+  const hls = state.hls;
+
+  if (hls && hls.subtitleTracks && hls.subtitleTracks.length) {
+    hls.subtitleTracks.forEach((t, i) => {
+      tracks.push({
+        id: `hls-${i}`,
+        name: t.name || '',
+        lang: t.lang || '',
+        kind: 'hls',
+        ref: i
+      });
+    });
+  }
+
+  // Native <track> elements on the video (rare for live HLS, but handle if present)
+  Array.from(videoEl.textTracks || []).forEach((t, i) => {
+    if (t.kind === 'subtitles' || t.kind === 'captions') {
+      tracks.push({
+        id: `native-${i}`,
+        name: t.label || '',
+        lang: t.language || '',
+        kind: 'native',
+        ref: t
+      });
+    }
+  });
+
+  state.ccTracks = tracks;
+  setActiveCc(null);
+}
+
+function setActiveCc(id) {
+  const hls = state.hls;
+  
+  if (id === null) {
+    if (hls) hls.subtitleTrack = -1;
+    Array.from(videoEl.textTracks || []).forEach(t => t.mode = 'disabled');
+    state.activeCcId = null;
+    refreshCcButtons();
+    buildCcList();
+    return;
+  }
+  
+  const track = state.ccTracks.find(t => t.id === id);
+  if (!track) return;
+  
+  // আগে activeCcId আপডেট করুন যাতে guard listener বিভ্রান্ত না হয়
+  state.activeCcId = id;
+  
+  Array.from(videoEl.textTracks || []).forEach(t => t.mode = 'disabled');
+  
+  if (track.kind === 'hls' && hls) {
+    hls.subtitleTrack = track.ref; // সরাসরি টার্গেট ট্র্যাকে যাও, মাঝে -1 দরকার নেই
+  } else if (track.kind === 'native') {
+    if (hls) hls.subtitleTrack = -1;
+    track.ref.mode = 'showing';
+  }
+  
+  refreshCcButtons();
+  buildCcList();
+}
+
+// HLS.js নিজে থেকে subtitle track auto-select করে ফেললে, CC state OFF থাকলে force বন্ধ করে দেওয়া
+document.addEventListener('hlsSubtitleTracksUpdate', () => {
+  collectCcTracks();
+});
+
+document.addEventListener('hlsSubtitleTrackSwitch', () => {
+  if (state.hls && state.activeCcId === null && state.hls.subtitleTrack !== -1) {
+    state.hls.subtitleTrack = -1;
+  }
+});
+
+function buildCcList() {
+  const list = $('moreCcList');
+  list.innerHTML = '';
+
+  if (!state.ccAvailable) {
+    const msg = document.createElement('div');
+    msg.style.cssText = 'padding:12px 10px; font-size:12px; color:rgba(255,255,255,0.4); text-align:center;';
+    msg.textContent = 'No subtitles available';
+    list.appendChild(msg);
+    return;
+  }
+
+  // OFF option
+  const offRow = document.createElement('div');
+  offRow.className = 'more-qual-row' + (state.activeCcId === null ? ' active' : '');
+  offRow.innerHTML = `
+    <div class="more-qual-dot"></div>
+    <span class="more-qual-label">Off</span>
+  `;
+  offRow.addEventListener('click', () => setActiveCc(null));
+  list.appendChild(offRow);
+
+  state.ccTracks.forEach(track => {
+    const isActive = state.activeCcId === track.id;
+    const row = document.createElement('div');
+    row.className = 'more-qual-row' + (isActive ? ' active' : '');
+    row.innerHTML = `
+      <div class="more-qual-dot"></div>
+      <span class="more-qual-label">${escHtml(ccLabel(track))}</span>
+    `;
+    row.addEventListener('click', () => setActiveCc(track.id));
+    list.appendChild(row);
+  });
+}
+
+// Standalone CC button — toggles last-used track or opens picker if multiple
+$('ccBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!state.ccAvailable) return;
+
+  if (state.activeCcId !== null) {
+    setActiveCc(null);
+    videoWrap.classList.add('controls-visible');
+    startHideTimer();
+    return;
+  }
+
+  if (state.ccTracks.length === 1) {
+    setActiveCc(state.ccTracks[0].id);
+    videoWrap.classList.add('controls-visible');
+    startHideTimer();
+    return;
+  }
+
+  morePopup.classList.add('open');
+  buildCcList();
+  openMoreSubPanel('morePanelCc');
+  startHideTimer();
+});
+
+// CC row inside more popup
+$('moreCcRow').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!state.ccAvailable) return;
+  buildCcList();
+  openMoreSubPanel('morePanelCc');
+});
+
+// Back button
+$('moreCcBack').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeMoreSubPanel();
+});
+
+// Re-sync CC tracks whenever HLS reports them (covers stream switches + live updates)
+document.addEventListener('hlsSubtitleTracksUpdate', () => {
+  collectCcTracks();
 });
 
 /* ═══════════════════════════════════════════════════════
