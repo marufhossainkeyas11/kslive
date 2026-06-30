@@ -303,10 +303,18 @@ async function init() {
   }
   
   checkMobile();
-  setTimeout(() => loadingScreen.classList.add('hidden'), 600);
+  setTimeout(() => {
+  loadingScreen.classList.add('hidden');
+    window.dispatchEvent(new Event('resize'));
+  }, 600);
   setTimeout(checkSharedUrl, 800);
 }  
-
+function setRealVH() {
+  document.documentElement.style.setProperty('--real-vh', `${window.innerHeight}px`);
+}
+setRealVH();
+window.addEventListener('resize', setRealVH);
+window.addEventListener('orientationchange', () => setTimeout(setRealVH, 100));
 
 /* ═══════════════════════════════════════════════════════
    PLAYLIST TABS
