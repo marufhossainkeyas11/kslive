@@ -58,8 +58,7 @@ body {
   font-family: var(--f);
   background: var(--bg);
   color: var(--text);
-  height: 100vh;
-  height: 100dvh;
+  height: var(--real-vh, 100vh);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1171,6 +1170,13 @@ video {
   font-size: 18px; font-weight: 700;
   color: var(--text);
   margin-bottom: 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+  word-break: break-word;
 }
 .ch-detail-meta { display: flex; flex-wrap: wrap; gap: 6px; }
 .meta-tag {
