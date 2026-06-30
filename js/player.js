@@ -561,14 +561,16 @@ function loadStream(ch, forceProxy = false) {
     });
      
     hls.on(Hls.Events.LEVEL_SWITCHED, (_, data) => {
-      const lv = hls.levels[data.level];
-      if (lv?.height) {
-        $('qualityBadge').textContent = `${lv.height}p`;
-        const cur = $('moreQualCurrent');
-        if (cur) cur.textContent = `${lv.height}p`;
-      }
-      document.dispatchEvent(new Event('hlsLevelUpdate'));
-    });
+     const lv = hls.levels[data.level];
+     const isAuto = hls.autoLevelEnabled;
+     if (lv?.height) {
+       const text = isAuto ? `AUTO · ${lv.height}p` : `${lv.height}p`;
+       $('qualityBadge').textContent = text;
+       const cur = $('moreQualCurrent');
+       if (cur) cur.textContent = text;
+     }
+     document.dispatchEvent(new Event('hlsLevelUpdate'));
+   });
 
     // Subtitle tracks become known once the manifest (and any media playlists) are parsed
     hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => {
