@@ -291,6 +291,12 @@ document.addEventListener('click', (e) => {
 });
 morePopup.addEventListener('click', e => e.stopPropagation());
 
+function updateVideoHeightVar() {
+  const h = $('videoWrap').getBoundingClientRect().height;
+  document.documentElement.style.setProperty('--video-h', h + 'px');
+}
+window.addEventListener('resize', updateVideoHeightVar);
+updateVideoHeightVar();
 
 /* ═══════════════════════════════════════════════════════
    CONTROLS — LAYOUT SYNC (mobile vs desktop)
