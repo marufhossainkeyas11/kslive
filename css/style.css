@@ -802,6 +802,11 @@ video {
 }
 .ctrl-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
 .ctrl-btn.active { color: var(--blue3); }
+.ctrl-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
 
 /* ── VOLUME SLIDER ── */
 .vol-slider {
@@ -957,6 +962,10 @@ video {
   opacity: 1;
   pointer-events: all;
   position: relative;
+}
+/* When a specific sub panel is requested, only that one becomes visible */
+.more-popup-inner.sub-open .more-panel-sub:not(.sub-active) {
+  display: none;
 }
 
 /* Sub panel header */
