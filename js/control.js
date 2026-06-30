@@ -548,6 +548,7 @@ function openMoreSubPanel(panelId) {
   const target = $(panelId);
   if (target) target.classList.add('sub-active');
   morePopupInner.classList.add('sub-open');
+  morePopup.scrollTop = 0;
 }
 
 function closeMoreSubPanel() {
@@ -555,6 +556,7 @@ function closeMoreSubPanel() {
   document.querySelectorAll('.more-panel-sub').forEach(p => p.classList.remove('sub-active'));
   $('moreQualList').innerHTML = '';
   $('moreCcList').innerHTML = '';
+  morePopup.scrollTop = 0;
 }
 
 function buildQualityList() {
@@ -625,8 +627,15 @@ function updateQualBadge(level) {
   
   let text;
   if (level === -1) {
+    // Auto মোডে actual চলমান resolution দেখাও
+    const runningLevel = hls.currentLevel;
+    const lv = hls.levels?.[runningLevel];
     const cnt = hls.levels?.length || 0;
-    text = cnt > 1 ? `AUTO · ${cnt}Q` : 'HLS';
+    if (lv?.height && cnt > 1) {
+      text = `AUTO · ${lv.height}p`;
+    } else {
+      text = cnt > 1 ? `AUTO · ${cnt}Q` : 'HLS';
+    }
   } else {
     const lv = hls.levels?.[level];
     text = lv?.height ? `${lv.height}p` : 'HLS';
