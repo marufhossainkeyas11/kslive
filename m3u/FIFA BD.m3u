@@ -1,61 +1,33 @@
 #EXTM3U
 
-#EXTINF:-1,Apple BipBop - HEVC/AVC + Subtitles + Multi-Audio
-https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_adv_example_hevc/master.m3u8
-# ---------- HLS ----------
+# ---------- HLS : Multi Audio + Subtitles ----------
+#EXTINF:-1 tvg-id="apple.bipbop" group-title="Player Test",Apple BipBop (Multi Audio + CC)
+https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8
 
-#EXTINF:-1 tvg-id="mux.demo" tvg-name="Mux Test" group-title="HLS",Mux Test
+# ---------- DASH : Multi Audio ----------
+#EXTINF:-1 tvg-id="angel.one" group-title="Player Test",Angel One (DASH Multi Audio)
+https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd
+
+# ---------- DASH : VOD ----------
+#EXTINF:-1 tvg-id="sintel" group-title="Player Test",Sintel (DASH)
+https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd
+
+# ---------- DASH : VOD ----------
+#EXTINF:-1 tvg-id="heliocentrism" group-title="Player Test",Heliocentrism (DASH)
+https://storage.googleapis.com/shaka-demo-assets/heliocentrism/heliocentrism.mpd
+
+# ---------- HLS : Live ----------
+#EXTINF:-1 tvg-id="iptv.org.aljazeera" group-title="Live",Al Jazeera English
+https://live-hls-web-aje.getaj.net/AJE/index.m3u8
+
+# ---------- HLS : Live ----------
+#EXTINF:-1 tvg-id="nasa.tv" group-title="Live",NASA TV
+https://ntv1-lh.akamaihd.net/i/NASA_101@319270/master.m3u8
+
+# ---------- HLS : Big Buck Bunny ----------
+#EXTINF:-1 tvg-id="bbb" group-title="VOD",Big Buck Bunny
 https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
 
-#EXTINF:-1 tvg-id="apple.bipbop" tvg-name="Apple BipBop" group-title="HLS",Apple BipBop (ABR)
-https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8
-
-#EXTINF:-1 tvg-id="akamai.live" tvg-name="Akamai Live" group-title="Live",Akamai Live
-https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8
-
-# ---------- DASH ----------
-
-#EXTINF:-1 tvg-id="dash.envivio" tvg-name="Envivio DASH" group-title="DASH",Envivio DASH
-https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd
-
-#EXTINF:-1 tvg-id="bbb.dash" tvg-name="Big Buck Bunny" group-title="DASH",Big Buck Bunny DASH
-https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd
-
-# ---------- Subtitle / CC ----------
-
-#EXTINF:-1 tvg-id="abc.news" tvg-name="ABC News" group-title="CC",ABC News (CC)
-https://c.mjh.nz/abc-news.m3u8
-
-#EXTINF:-1 tvg-id="pluto.classic" tvg-name="Pluto Classic TV" group-title="CC",Pluto Classic TV
-https://d1jzu95oc8fgt3.cloudfront.net/FOX_Sports.m3u8
-
-# ---------- Multi Audio ----------
-
-#EXTINF:-1 tvg-id="tears" tvg-name="Tears of Steel" group-title="Multi Audio",Tears of Steel
+# ---------- HLS : Tears of Steel ----------
+#EXTINF:-1 tvg-id="tos" group-title="VOD",Tears of Steel
 https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8
-
-# ---------- DRM (Expected to Fail Without License) ----------
-
-#EXTINF:-1 tvg-id="drm" tvg-name="Widevine DRM Demo" group-title="DRM",Widevine DRM Demo
-https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8
-
-#EXTINF:-1 group-title="ABR / Multi-Quality",Sintel - Adaptive Bitrate (240p-1080p)
-https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8
-
-#EXTINF:-1 group-title="ABR / Multi-Quality",Mux Test - x36xhzz (Adaptive)
-https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
-
-#EXTINF:-1 group-title="ABR / Multi-Quality",JW Player Demo (360p-720p)
-https://cdn.jwplayer.com/manifests/pZxWPRg4.m3u8
-
-#EXTINF:-1 group-title="4K / High Resolution",Tears of Steel - 4K UHD
-https://pb-ehs1glsha1juy.akamaized.net/Love_Nature_4K.m3u8
-
-#EXTINF:-1 group-title="Subtitles + Multi-Audio",Sintel - Multi-Audio + Subtitles
-https://cdn.bitmovin.com/content/assets/sintel/hls/playlist.m3u8
-
-#EXTINF:-1 group-title="Fallback Test",Akamai Multi-bitrate Sample
-https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8
-
-#EXTINF:-1 group-title="MPEG-DASH",Sintel - DASH (MPD, dash.js টেস্টের জন্য)
-https://cdn.bitmovin.com/content/assets/sintel/sintel.mpd
