@@ -48,7 +48,7 @@ https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
 https://cdn.jwplayer.com/manifests/pZxWPRg4.m3u8
 
 #EXTINF:-1 group-title="4K / High Resolution",Tears of Steel - 4K UHD
-https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8
+https://pb-ehs1glsha1juy.akamaized.net/Love_Nature_4K.m3u8
 
 #EXTINF:-1 group-title="Subtitles + Multi-Audio",Sintel - Multi-Audio + Subtitles
 https://cdn.bitmovin.com/content/assets/sintel/hls/playlist.m3u8
