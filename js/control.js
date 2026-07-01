@@ -604,7 +604,7 @@ function buildQualityList() {
   
   sorted.forEach(({ lv, i }) => {
     const label = lv.height ? `${lv.height}p` : `Level ${i + 1}`;
-    const bitrate = lv.bitrate ? `${Math.round(lv.bitrate / 1000)}k` : '';
+    const bitrate = lv.bitrate ? `${Math.round(lv.bitrate / 1000000)} Mbps` : '';
     const isActive = selectedLevel === i;
     
     const row = document.createElement('div');
