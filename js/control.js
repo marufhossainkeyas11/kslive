@@ -807,10 +807,11 @@ state.audioTracks = []; // [{ id, name, lang, kind: 'hls'|'native', ref }]
 state.activeAudioId = null; // null = default/not selected yet
 
 function audioLabel(track) {
-  const name = track.name && track.name.trim();
+  const name = track.name.toUpperCase() && track.name.trim().toUpperCase();
   const lang = track.lang && track.lang.trim();
-  if (name && lang && name.toLowerCase() !== lang.toLowerCase()) return `${name} (${lang.toUpperCase()})`;
-  return name || (lang ? lang.toUpperCase() : 'Default');
+  const fullLang = fullLangName(lang);
+  if (name && fullLang && name.toLowerCase() !== fullLang.toLowerCase()) return `${fullLang} (${name})`;
+  return name || fullLang || 'Default';
 }
 
 function refreshAudioButtons() {
@@ -981,10 +982,11 @@ state.ccTracks = [];      // [{ id, name, lang, kind: 'hls'|'native', ref }]
 state.activeCcId = null;  // null = off
 
 function ccLabel(track) {
-  const name = track.name && track.name.trim();
+  const name = track.name.toUpperCase() && track.name.trim().toUpperCase();
   const lang = track.lang && track.lang.trim();
-  if (name && lang && name.toLowerCase() !== lang.toLowerCase()) return `${name} (${lang.toUpperCase()})`;
-  return name || (lang ? lang.toUpperCase() : 'Unknown');
+  const fullLang = fullLangName(lang);
+  if (name && fullLang && name.toLowerCase() !== fullLang.toLowerCase()) return `${fullLang} (${name})`;
+  return name || fullLang || 'Default';
 }
 
 function refreshCcButtons() {
