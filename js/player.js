@@ -617,6 +617,10 @@ function loadStream(ch, forceProxy = false) {
   state.ccTracks  = [];
   state.activeCcId = null;
   if (typeof refreshCcButtons === 'function') refreshCcButtons();
+  
+  state.audioTracks = [];
+  state.activeAudioId = null;
+  if (typeof refreshAudioButtons === 'function') refreshAudioButtons();
 
   const hdrs      = ch.compiledHeaders || {};
   const hasHdrs   = Object.keys(hdrs).length > 0;
@@ -662,6 +666,8 @@ function loadHls(ch, url, hdrs, usingProxy) {
 
     hls.on(Hls.Events.MANIFEST_PARSED, (_, data) => {
       qualityBadge.textContent = data.levels?.length > 1 ? `HLS · ${data.levels.length}Q` : 'HLS';
+      if (typeof collectAudioTracks === 'function') collectAudioTracks();
+  
       videoEl.play()
         .then(() => { state.isPlaying = true;  updatePlayPauseIcon(); setStatus('Playing', 'green'); })
         .catch(() => { state.isPlaying = false; updatePlayPauseIcon(); setStatus('Tap to play', 'yellow'); });
@@ -681,6 +687,9 @@ function loadHls(ch, url, hdrs, usingProxy) {
 
     hls.on(Hls.Events.SUBTITLE_TRACKS_UPDATED, () => document.dispatchEvent(new Event('hlsSubtitleTracksUpdate')));
     hls.on(Hls.Events.SUBTITLE_TRACK_SWITCH,   () => document.dispatchEvent(new Event('hlsSubtitleTrackSwitch')));
+
+    hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => document.dispatchEvent(new Event('hlsAudioTracksUpdate')));
+    hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, () => document.dispatchEvent(new Event('hlsAudioTrackSwitch')));
 
     hls.on(Hls.Events.ERROR, (_, data) => {
       const httpCode  = data.response?.code;
@@ -740,7 +749,6 @@ function loadHls(ch, url, hdrs, usingProxy) {
   }
 }
 
-
 /* ── DASH/MPD (dash.js, loaded on-demand) ────────────── */
 async function loadDash(ch, url, hdrs, usingProxy) {
   qualityBadge.textContent = 'DASH';
@@ -788,6 +796,12 @@ async function loadDash(ch, url, hdrs, usingProxy) {
       qualityBadge.textContent = list?.length > 1 ? `DASH · ${list.length}Q` : 'DASH';
     } catch {}
     document.dispatchEvent(new Event('dashStreamReady'));
+    if (typeof collectAudioTracks === 'function') collectAudioTracks();
+    if (typeof collectCcTracks === 'function') collectCcTracks(); // ← নতুন লাইন
+  });
+  
+  player.on(dashjs.MediaPlayer.events.TRACK_CHANGE_RENDERED, e => {
+    if (e.mediaType === 'audio' && typeof syncDashAudioActive === 'function') syncDashAudioActive();
   });
 
   player.on(dashjs.MediaPlayer.events.QUALITY_CHANGE_RENDERED, data => {
