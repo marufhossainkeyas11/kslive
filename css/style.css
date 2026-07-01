@@ -861,7 +861,6 @@ video {
   border-radius: 5px;
   color: var(--blue3);
   letter-spacing: 0.05em;
-  text-transform: uppercase;
   white-space: nowrap;
 }
 
