@@ -905,6 +905,7 @@ video {
   transition: background 0.15s ease;
   background: rgba(255,255,255,0.06);
   cursor: pointer;
+  height: 35px;
 }
 .more-popup-row:hover { background: rgba(255,255,255,0.11); }
 .more-popup-label {
