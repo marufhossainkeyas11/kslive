@@ -1,19 +1,38 @@
 #EXTM3U
 
-#EXTINF:-1 tvg-id="mux.demo" tvg-name="Mux Test" tvg-logo="https://i.imgur.com/8iQeR6Y.png" group-title="Demo",Mux Test (HLS)
+# ---------- HLS ----------
+
+#EXTINF:-1 tvg-id="mux.demo" tvg-name="Mux Test" group-title="HLS",Mux Test
 https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
 
-#EXTINF:-1 tvg-id="apple.bipbop" tvg-name="Apple BipBop" tvg-logo="https://i.imgur.com/M7w6F7G.png" group-title="Demo",Apple BipBop (HLS)
+#EXTINF:-1 tvg-id="apple.bipbop" tvg-name="Apple BipBop" group-title="HLS",Apple BipBop (ABR)
 https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8
 
-#EXTINF:-1 tvg-id="akamai.live" tvg-name="Akamai Live" tvg-logo="https://i.imgur.com/tmX6w9J.png" group-title="Live",Akamai Live (HLS)
+#EXTINF:-1 tvg-id="akamai.live" tvg-name="Akamai Live" group-title="Live",Akamai Live
 https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8
 
-#EXTINF:-1 tvg-id="dash.envivio" tvg-name="Envivio DASH" tvg-logo="https://i.imgur.com/2r4s9lG.png" group-title="DASH",Envivio DASH (MPD)
+# ---------- DASH ----------
+
+#EXTINF:-1 tvg-id="dash.envivio" tvg-name="Envivio DASH" group-title="DASH",Envivio DASH
 https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd
 
-#EXTINF:-1 tvg-id="dash.bbb" tvg-name="Big Buck Bunny DASH" tvg-logo="https://i.imgur.com/5x4O8vS.png" group-title="DASH",Big Buck Bunny (MPD)
+#EXTINF:-1 tvg-id="bbb.dash" tvg-name="Big Buck Bunny" group-title="DASH",Big Buck Bunny DASH
 https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd
 
-#EXTINF:-1 tvg-id="bitmovin.demo" tvg-name="Bitmovin Demo" tvg-logo="https://i.imgur.com/fYkY6Jt.png" group-title="DASH",Bitmovin Demo (MPD)
-https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/mpds/11331.mpd
+# ---------- Subtitle / CC ----------
+
+#EXTINF:-1 tvg-id="abc.news" tvg-name="ABC News" group-title="CC",ABC News (CC)
+https://c.mjh.nz/abc-news.m3u8
+
+#EXTINF:-1 tvg-id="pluto.classic" tvg-name="Pluto Classic TV" group-title="CC",Pluto Classic TV
+https://c.mjh.nz/PlutoTV/ClassicTV.m3u8
+
+# ---------- Multi Audio ----------
+
+#EXTINF:-1 tvg-id="tears" tvg-name="Tears of Steel" group-title="Multi Audio",Tears of Steel
+https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8
+
+# ---------- DRM (Expected to Fail Without License) ----------
+
+#EXTINF:-1 tvg-id="drm" tvg-name="Widevine DRM Demo" group-title="DRM",Widevine DRM Demo
+https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8
