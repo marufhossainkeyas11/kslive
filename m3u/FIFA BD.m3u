@@ -1,23 +1,19 @@
 #EXTM3U
 
-#EXTINF:-1 tvg-logo="" group-title="Category 1", Server - 2
-https://upload.wikimedia.org/wikipedia/commons/transcoded/c/c0/Big_Buck_Bunny_4K.webm/Big_Buck_Bunny_4K.webm.1080p.vp9.webm
+#EXTINF:-1 tvg-id="mux.demo" tvg-name="Mux Test" tvg-logo="https://i.imgur.com/8iQeR6Y.png" group-title="Demo",Mux Test (HLS)
+https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
 
-#EXTINF:-1 tvg-logo="" group-title="Category 1", Server - 3
-https://d1jzu95oc8fgt3.cloudfront.net/FOX_Sports.m3u8
+#EXTINF:-1 tvg-id="apple.bipbop" tvg-name="Apple BipBop" tvg-logo="https://i.imgur.com/M7w6F7G.png" group-title="Demo",Apple BipBop (HLS)
+https://devstreaming-cdn.apple.com/videos/streaming/examples/bipbop_4x3/bipbop_4x3_variant.m3u8
 
-#EXTINF:-1 tvg-logo="" group-title="Category 1", Server - 4
-https://1nyaler.streamhostingcdn.top/stream/23/index.m3u8
+#EXTINF:-1 tvg-id="akamai.live" tvg-name="Akamai Live" tvg-logo="https://i.imgur.com/tmX6w9J.png" group-title="Live",Akamai Live (HLS)
+https://cph-p2p-msl.akamaized.net/hls/live/2000341/test/master.m3u8
 
-#EXTINF:-1 tvg-logo="" group-title="Category 1", Server - 5
-https://pub-e3eb43d02df647099f49525f20574746.r2.dev/BMax1-2/index.m3u8
+#EXTINF:-1 tvg-id="dash.envivio" tvg-name="Envivio DASH" tvg-logo="https://i.imgur.com/2r4s9lG.png" group-title="DASH",Envivio DASH (MPD)
+https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd
 
-#EXTINF:-1 tvg-logo="" group-title="Category 1", Server (DSports2)
-https://streamvidex.qzz.io/videx/dsports2/index.m3u8
+#EXTINF:-1 tvg-id="dash.bbb" tvg-name="Big Buck Bunny DASH" tvg-logo="https://i.imgur.com/5x4O8vS.png" group-title="DASH",Big Buck Bunny (MPD)
+https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd
 
-#EXTINF:-1 tvg-logo="" group-title="Category 2", Server - 4
-https://1nyaler.streamhostingcdn.top/stream/21/index.m3u8
-
-#EXTINF:-1 tvg-logo="" group-title="Category 2", Server (DSports)
-https://streamvidex.qzz.io/videx/dsports/index.m3u8
-
+#EXTINF:-1 tvg-id="bitmovin.demo" tvg-name="Bitmovin Demo" tvg-logo="https://i.imgur.com/fYkY6Jt.png" group-title="DASH",Bitmovin Demo (MPD)
+https://cdn.bitmovin.com/content/assets/art-of-motion-dash-hls-progressive/mpds/11331.mpd
