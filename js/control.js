@@ -203,6 +203,72 @@ document.addEventListener('fullscreenchange', () => {
   else screen.orientation?.unlock?.();
 });
 
+/* ═══════════════════════════════════════════════════════
+   CONTROLS — SCREEN ORIENTATION LOCK (fullscreen only)
+   ═══════════════════════════════════════════════════════ */
+(function() {
+  const orientBtn = $('orientBtn');
+  const orientRow = $('moreOrientRow');
+  const orientAPI = screen.orientation;
+  const supported = !!(orientAPI && orientAPI.lock);
+  
+  if (!supported) return; // API না থাকলে বাটন চিরকাল hidden থাকবে
+  
+  function isLandscape() {
+    return (orientAPI.type || '').startsWith('landscape');
+  }
+  
+  async function toggleOrientation() {
+    try {
+      if (isLandscape()) {
+        await orientAPI.lock('portrait');
+      } else {
+        await orientAPI.lock('landscape');
+      }
+    } catch (e) {
+      showToast('Rotation not supported on this device');
+    }
+  }
+  
+  function showOrientControls() {
+    if (orientBtn) orientBtn.style.display = '';
+    if (orientRow) orientRow.style.display = 'flex';
+  }
+  
+  function hideOrientControls() {
+    if (orientBtn) orientBtn.style.display = 'none';
+    if (orientRow) orientRow.style.display = 'none';
+  }
+  
+  orientBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleOrientation();
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (morePopup.classList.contains('open')) return;
+      videoWrap.classList.remove('controls-visible');
+    }, 3000);
+  });
+  
+  orientRow?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    morePopup.classList.remove('open');
+    toggleOrientation();
+  });
+  
+  document.addEventListener('fullscreenchange', () => {
+    syncControlLayout();
+    if (!document.fullscreenElement) {
+      orientAPI.unlock?.();
+    }
+  });
+  
+  ['webkitfullscreenchange', 'mozfullscreenchange'].forEach(evt => {
+    document.addEventListener(evt, syncControlLayout);
+  });
+  
+})();
+
 async function togglePiP() {
   try {
     if (document.pictureInPictureElement) { await document.exitPictureInPicture(); return; }
@@ -304,7 +370,8 @@ updateVideoHeightVar();
 function syncControlLayout() {
   const isMobile = window.innerWidth <= 450; // volume → popup এ যায়
   const isTiny = window.innerWidth <= 345; // fullscreen → popup এ যায়
-  const isCcTiny = window.innerWidth <= 490; // CC + PiP → একসাথে popup এ যায়
+  const isCcTiny = window.innerWidth <= 490; // CC + PiP + Orient → একসাথে popup এ যায়
+  const inFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
   
   // --- Volume: বাইরে hide হলে popup row হিসেবে দেখাবে ---
   const volSlider = $('volSlider');
@@ -341,6 +408,18 @@ function syncControlLayout() {
     ccRow.classList.toggle('disabled-row', !ccSupported);
   }
   
+  // --- Orientation Lock (শুধু fullscreen অবস্থায় প্রযোজ্য) ---
+  const orientBtn = $('orientBtn');
+  const orientRow = $('moreOrientRow');
+  const orientSupported = !!(screen.orientation && screen.orientation.lock);
+  if (orientBtn) {
+    orientBtn.style.display = (inFullscreen && !isCcTiny && orientSupported) ? '' : 'none';
+  }
+  if (orientRow) {
+    orientRow.style.display = (inFullscreen && isCcTiny && orientSupported) ? 'flex' : 'none';
+    orientRow.classList.toggle('disabled-row', !orientSupported);
+  }
+  
   // --- Fullscreen ---
   const fsRow = $('moreFullscreenRow');
   const fsBtn = $('fullscreenBtn');
@@ -355,6 +434,25 @@ function syncControlLayout() {
   }
   if (fsBtn) {
     fsBtn.style.display = isTiny ? 'none' : '';
+  }
+  
+  // --- Dividers: প্রতিটা row hide হলে তার ঠিক পরের divider-ও hide;
+  //     আর সবার শেষে যে row visible থাকে, তার নিজের পরের divider-ও hide (trailing divider বাদ) ---
+  const allRows = [volRow, $('moreQualRow'), ccRow, orientRow, pipRow, fsRow].filter(Boolean);
+  let lastVisibleRow = null;
+  allRows.forEach(row => {
+    const div = row.nextElementSibling;
+    const visible = row.style.display !== 'none';
+    if (div && div.classList.contains('more-popup-divider')) {
+      div.style.display = visible ? '' : 'none';
+    }
+    if (visible) lastVisibleRow = row;
+  });
+  if (lastVisibleRow) {
+    const div = lastVisibleRow.nextElementSibling;
+    if (div && div.classList.contains('more-popup-divider')) {
+      div.style.display = 'none';
+    }
   }
 }
 syncControlLayout();
