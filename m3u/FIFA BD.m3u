@@ -36,3 +36,24 @@ https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tear
 
 #EXTINF:-1 tvg-id="drm" tvg-name="Widevine DRM Demo" group-title="DRM",Widevine DRM Demo
 https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8
+
+#EXTINF:-1 group-title="ABR / Multi-Quality",Sintel - Adaptive Bitrate (240p-1080p)
+https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8
+
+#EXTINF:-1 group-title="ABR / Multi-Quality",Mux Test - x36xhzz (Adaptive)
+https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
+
+#EXTINF:-1 group-title="ABR / Multi-Quality",JW Player Demo (360p-720p)
+https://cdn.jwplayer.com/manifests/pZxWPRg4.m3u8
+
+#EXTINF:-1 group-title="4K / High Resolution",Tears of Steel - 4K UHD
+https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8
+
+#EXTINF:-1 group-title="Subtitles + Multi-Audio",Sintel - Multi-Audio + Subtitles
+https://cdn.bitmovin.com/content/assets/sintel/hls/playlist.m3u8
+
+#EXTINF:-1 group-title="Fallback Test",Akamai Multi-bitrate Sample
+https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8
+
+#EXTINF:-1 group-title="MPEG-DASH",Sintel - DASH (MPD, dash.js টেস্টের জন্য)
+https://cdn.bitmovin.com/content/assets/sintel/sintel.mpd
