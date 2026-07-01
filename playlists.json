@@ -15,11 +15,6 @@
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee_%26_fifa.png"
   },
   {
-    "name": "FiFaWorldCup BD (ISP Sensitive)",
-    "url": "https://m3uedit.online/get/dc813613e959d6352eca0a21e25c0e0b.m3u",
-    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/bangladesh_%26_fifa.png"
-  },
-  {
     "name": "FIFA LIVE",
     "url": "https://summer-firefly-d294.marufhossainkeyas.workers.dev/",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Fifa_2026.png"
@@ -38,6 +33,11 @@
     "name": "Fancode Sports (Premium)",
     "url": "https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/fancode.png"
+  },
+  {
+    "name": "Willow Sports (Premium)",
+    "url": "https://raw.githubusercontent.com/srhady/willow-event/refs/heads/main/live_sports.m3u",
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/willow.jpg"
   },
   {
     "name": "Axsports (Sports)",
