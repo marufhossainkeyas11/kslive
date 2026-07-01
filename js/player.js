@@ -187,6 +187,28 @@ const toastEl = $('toast');
 const videoWrap = $('videoWrap');
 const morePopup = $('morePopup');
 
+/* ═══════════════════════════════════════════════════════
+   LANGUAGE CODE → FULL NAME
+   ═══════════════════════════════════════════════════════ */
+const LANG_NAMES = {
+  en: 'English', bn: 'Bangla', hi: 'Hindi', ur: 'Urdu', ar: 'Arabic',
+  es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese',
+  ru: 'Russian', zh: 'Chinese', ja: 'Japanese', ko: 'Korean', tr: 'Turkish',
+  fa: 'Persian', ta: 'Tamil', te: 'Telugu', ml: 'Malayalam', mr: 'Marathi',
+  gu: 'Gujarati', pa: 'Punjabi', kn: 'Kannada', or: 'Odia', as: 'Assamese',
+  ne: 'Nepali', si: 'Sinhala', th: 'Thai', vi: 'Vietnamese', id: 'Indonesian',
+  ms: 'Malay', nl: 'Dutch', sv: 'Swedish', no: 'Norwegian', da: 'Danish',
+  fi: 'Finnish', pl: 'Polish', el: 'Greek', he: 'Hebrew', uk: 'Ukrainian',
+  ro: 'Romanian', hu: 'Hungarian', cs: 'Czech', sk: 'Slovak', bg: 'Bulgarian',
+  sr: 'Serbian', hr: 'Croatian', sw: 'Swahili', am: 'Amharic', tl: 'Filipino',
+  und: 'Undetermined'
+};
+
+function fullLangName(lang) {
+  if (!lang) return '';
+  const code = lang.split('-')[0].toLowerCase(); // 'en-US' → 'en'
+  return LANG_NAMES[code] || lang.toUpperCase();
+}
 
 /* ═══════════════════════════════════════════════════════
    UTILS
