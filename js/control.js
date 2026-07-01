@@ -408,6 +408,19 @@ function syncControlLayout() {
     ccRow.classList.toggle('disabled-row', !ccSupported);
   }
   
+  // --- Audio Track ---
+  const audioBtn = $('audioBtn');
+  const audioRow = $('moreAudioRow');
+  const audioSupported = state.audioAvailable;
+  if (audioBtn) {
+    audioBtn.style.display = isCcTiny ? 'none' : '';
+    audioBtn.disabled = !audioSupported;
+  }
+  if (audioRow) {
+    audioRow.style.display = isCcTiny ? 'flex' : 'none';
+    audioRow.classList.toggle('disabled-row', !audioSupported);
+  }
+  
   // --- Orientation Lock (শুধু fullscreen অবস্থায় প্রযোজ্য) ---
   const orientBtn = $('orientBtn');
   const orientRow = $('moreOrientRow');
@@ -438,8 +451,7 @@ function syncControlLayout() {
   
   // --- Dividers: প্রতিটা row hide হলে তার ঠিক পরের divider-ও hide;
   //     আর সবার শেষে যে row visible থাকে, তার নিজের পরের divider-ও hide (trailing divider বাদ) ---
-  const allRows = [volRow, $('moreQualRow'), ccRow, orientRow, pipRow, fsRow].filter(Boolean);
-  let lastVisibleRow = null;
+  const allRows = [volRow, $('moreQualRow'), ccRow, audioRow, orientRow, pipRow, fsRow].filter(Boolean);  let lastVisibleRow = null;
   allRows.forEach(row => {
     const div = row.nextElementSibling;
     const visible = row.style.display !== 'none';
@@ -660,6 +672,7 @@ function closeMoreSubPanel() {
   document.querySelectorAll('.more-panel-sub').forEach(p => p.classList.remove('sub-active'));
   $('moreQualList').innerHTML = '';
   $('moreCcList').innerHTML = '';
+  $('moreAudioList').innerHTML = '';
   morePopup.scrollTop = 0;
 }
 
@@ -787,6 +800,180 @@ document.addEventListener('hlsLevelUpdate', () => {
 });
 
 /* ═══════════════════════════════════════════════════════
+   MORE POPUP — AUDIO TRACK CONTROL PANEL
+   ═══════════════════════════════════════════════════════ */
+state.audioAvailable = false;
+state.audioTracks = []; // [{ id, name, lang, kind: 'hls'|'native', ref }]
+state.activeAudioId = null; // null = default/not selected yet
+
+function audioLabel(track) {
+  const name = track.name && track.name.trim();
+  const lang = track.lang && track.lang.trim();
+  if (name && lang && name.toLowerCase() !== lang.toLowerCase()) return `${name} (${lang.toUpperCase()})`;
+  return name || (lang ? lang.toUpperCase() : 'Default');
+}
+
+function refreshAudioButtons() {
+  const audioBtn = $('audioBtn');
+  const audioRow = $('moreAudioRow');
+  const cur = $('moreAudioCurrent');
+  
+  state.audioAvailable = state.audioTracks.length > 1; // ১টা থাকলে সুইচ করার কিছু নেই
+  
+  if (audioBtn) {
+    audioBtn.disabled = !state.audioAvailable;
+    audioBtn.classList.toggle('active', state.activeAudioId !== null);
+  }
+  if (audioRow) audioRow.classList.toggle('disabled-row', !state.audioAvailable);
+  
+  if (cur) {
+    if (!state.audioAvailable) {
+      cur.textContent = state.audioTracks.length === 1 ? 'DEFAULT' : 'N/A';
+    } else {
+      const t = state.audioTracks.find(t => t.id === state.activeAudioId);
+      cur.textContent = t ? audioLabel(t).split(' ')[0].toUpperCase().slice(0, 6) : 'DEFAULT';
+    }
+  }
+}
+
+// Collect audio tracks from current HLS instance (native <video> multi-audio বেশিরভাগ ব্রাউজারে সাপোর্ট নেই, তাই মূলত HLS.js নির্ভর)
+function collectAudioTracks() {
+  const tracks = [];
+  
+  // ── HLS ──
+  if (state.hls && state.hls.audioTracks && state.hls.audioTracks.length) {
+    state.hls.audioTracks.forEach((t, i) => {
+      tracks.push({ id: `hls-${i}`, name: t.name || '', lang: t.lang || '', kind: 'hls', ref: i });
+    });
+    state.audioTracks = tracks;
+    const currentIdx = state.hls.audioTrack;
+    state.activeAudioId = (currentIdx >= 0 && tracks[currentIdx]) ? tracks[currentIdx].id : null;
+    refreshAudioButtons();
+    buildAudioList();
+    return;
+  }
+  
+  // ── DASH ──
+  if (state.dash) {
+    let dashTracks = [];
+    try { dashTracks = state.dash.getTracksFor('audio') || []; } catch {}
+    
+    dashTracks.forEach((t, i) => {
+      const name = t.labels?.[0]?.text || t.lang || '';
+      tracks.push({ id: `dash-${i}`, name, lang: t.lang || '', kind: 'dash', ref: t });
+    });
+    
+    state.audioTracks = tracks;
+    
+    // বর্তমানে active track খুঁজে বের করা
+    let activeTrack = null;
+    try { activeTrack = state.dash.getCurrentTrackFor('audio'); } catch {}
+    const activeIdx = tracks.findIndex(tr => tr.ref === activeTrack);
+    state.activeAudioId = activeIdx >= 0 ? tracks[activeIdx].id : (tracks[0]?.id ?? null);
+    
+    refreshAudioButtons();
+    buildAudioList();
+    return;
+  }
+  
+  // ── কিছুই নেই ──
+  state.audioTracks = [];
+  state.activeAudioId = null;
+  refreshAudioButtons();
+  buildAudioList();
+}
+
+function setActiveAudio(id) {
+  const track = state.audioTracks.find(t => t.id === id);
+  if (!track) return;
+  
+  state.activeAudioId = id;
+  
+  if (track.kind === 'hls' && state.hls) {
+    state.hls.audioTrack = track.ref;
+  } else if (track.kind === 'dash' && state.dash) {
+    try { state.dash.setCurrentTrack(track.ref); } catch (e) { console.warn('[DASH] audio switch failed', e); }
+  }
+  
+  refreshAudioButtons();
+  buildAudioList();
+}
+
+// dash.js নিজে থেকে track sync করলে UI আপডেট করার হেল্পার
+function syncDashAudioActive() {
+  if (!state.dash) return;
+  let activeTrack = null;
+  try { activeTrack = state.dash.getCurrentTrackFor('audio'); } catch {}
+  const match = state.audioTracks.find(tr => tr.ref === activeTrack);
+  state.activeAudioId = match ? match.id : state.activeAudioId;
+  refreshAudioButtons();
+}
+
+function buildAudioList() {
+  const list = $('moreAudioList');
+  list.innerHTML = '';
+  
+  if (!state.audioAvailable) {
+    const msg = document.createElement('div');
+    msg.style.cssText = 'padding:12px 10px; font-size:12px; color:rgba(255,255,255,0.4); text-align:center;';
+    msg.textContent = state.audioTracks.length === 1 ? 'Only 1 audio track available' : 'No audio tracks available';
+    list.appendChild(msg);
+    return;
+  }
+  
+  state.audioTracks.forEach(track => {
+    const isActive = state.activeAudioId === track.id;
+    const row = document.createElement('div');
+    row.className = 'more-qual-row' + (isActive ? ' active' : '');
+    row.innerHTML = `
+      <div class="more-qual-dot"></div>
+      <span class="more-qual-label">${escHtml(audioLabel(track))}</span>
+    `;
+    row.addEventListener('click', () => setActiveAudio(track.id));
+    list.appendChild(row);
+  });
+}
+
+// Standalone Audio button — একাধিক ট্র্যাক থাকলে picker খুলবে
+$('audioBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!state.audioAvailable) return;
+  
+  morePopup.classList.add('open');
+  buildAudioList();
+  openMoreSubPanel('morePanelAudio');
+  startHideTimer();
+});
+
+// Audio row inside more popup
+$('moreAudioRow').addEventListener('click', (e) => {
+  e.stopPropagation();
+  if (!state.audioAvailable) return;
+  buildAudioList();
+  openMoreSubPanel('morePanelAudio');
+});
+
+// Back button
+$('moreAudioBack').addEventListener('click', (e) => {
+  e.stopPropagation();
+  closeMoreSubPanel();
+});
+
+// HLS নিজে থেকে audio track list আপডেট করলে
+document.addEventListener('hlsAudioTracksUpdate', () => {
+  collectAudioTracks();
+});
+
+document.addEventListener('hlsAudioTrackSwitch', () => {
+  if (state.hls) {
+    const idx = state.hls.audioTrack;
+    const t = state.audioTracks[idx];
+    state.activeAudioId = t ? t.id : null;
+    refreshAudioButtons();
+  }
+});
+
+/* ═══════════════════════════════════════════════════════
    MORE POPUP — SUBTITLE / CC CONTROL PANEL
    ═══════════════════════════════════════════════════════ */
 state.ccAvailable = false;
@@ -828,35 +1015,35 @@ function refreshCcButtons() {
 // Collect subtitle tracks from current HLS instance + native <track> elements
 function collectCcTracks() {
   const tracks = [];
-  const hls = state.hls;
-
-  if (hls && hls.subtitleTracks && hls.subtitleTracks.length) {
-    hls.subtitleTracks.forEach((t, i) => {
-      tracks.push({
-        id: `hls-${i}`,
-        name: t.name || '',
-        lang: t.lang || '',
-        kind: 'hls',
-        ref: i
-      });
+  
+  // ── HLS ──
+  if (state.hls && state.hls.subtitleTracks && state.hls.subtitleTracks.length) {
+    state.hls.subtitleTracks.forEach((t, i) => {
+      tracks.push({ id: `hls-${i}`, name: t.name || '', lang: t.lang || '', kind: 'hls', ref: i });
     });
   }
-
-  // Native <track> elements on the video (rare for live HLS, but handle if present)
-  Array.from(videoEl.textTracks || []).forEach((t, i) => {
-    if (t.kind === 'subtitles' || t.kind === 'captions') {
-      tracks.push({
-        id: `native-${i}`,
-        name: t.label || '',
-        lang: t.language || '',
-        kind: 'native',
-        ref: t
-      });
-    }
-  });
-
+  
+  // ── DASH ──
+  if (state.dash) {
+    let dashTracks = [];
+    try { dashTracks = state.dash.getTracksFor('text') || []; } catch {}
+    dashTracks.forEach((t, i) => {
+      const name = t.labels?.[0]?.text || t.lang || '';
+      tracks.push({ id: `dash-${i}`, name, lang: t.lang || '', kind: 'dash', ref: t, idx: i });
+    });
+  }
+  
+  // ── Native <track> elements (Safari native HLS পাথ) ──
+  if (!state.hls && !state.dash) {
+    Array.from(videoEl.textTracks || []).forEach((t, i) => {
+      if (t.kind === 'subtitles' || t.kind === 'captions') {
+        tracks.push({ id: `native-${i}`, name: t.label || '', lang: t.language || '', kind: 'native', ref: t });
+      }
+    });
+  }
+  
   state.ccTracks = tracks;
-  setActiveCc(null);
+  setActiveCc(null); // default: off
 }
 
 function setActiveCc(id) {
