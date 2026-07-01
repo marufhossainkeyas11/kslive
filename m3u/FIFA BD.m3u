@@ -25,7 +25,7 @@ https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps.mpd
 https://c.mjh.nz/abc-news.m3u8
 
 #EXTINF:-1 tvg-id="pluto.classic" tvg-name="Pluto Classic TV" group-title="CC",Pluto Classic TV
-https://c.mjh.nz/PlutoTV/ClassicTV.m3u8
+https://d1jzu95oc8fgt3.cloudfront.net/FOX_Sports.m3u8
 
 # ---------- Multi Audio ----------
 
