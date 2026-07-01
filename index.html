@@ -342,6 +342,19 @@
                   
                   <!-- ── MAIN PANEL ── -->
                   <div class="more-panel more-panel-main" id="morePanelMain">
+
+                    <!-- Orientation Lock (fullscreen only) -->
+                    <div class="more-popup-row" id="moreOrientRow" style="display:none; cursor:pointer; color:#fff;">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 -960 960 960" fill="currentColor">
+                        <path d="M487-104 150-440h114l280 280 200-200H640v-80h240v240h-80v-104L600-104q-23 23-56.5 23T487-104ZM80-520v-240h80v104l200-200q23-23 56.5-23t56.5 23l337 336H696L416-800 216-600h104v80H80Z" />
+                      </svg>
+                      <span class="more-popup-label" style="flex:1">Rotate Screen</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z" />
+                      </svg>
+                    </div>
+                    
+                    <div class="more-popup-divider"></div>
                     
                     <!-- Volume row (mobile) -->
                     <div class="more-popup-row" id="moreVolRow">
@@ -446,6 +459,12 @@
                 </div>
               </div>
             </div>
+
+            <button class="ctrl-btn" id="orientBtn" title="Rotate Screen" style="display:none">
+              <svg xmlns="http://www.w3.org/2000/svg" height="20" width="20" viewBox="0 -960 960 960" fill="currentColor">
+                <path d="M487-104 150-440h114l280 280 200-200H640v-80h240v240h-80v-104L600-104q-23 23-56.5 23T487-104ZM80-520v-240h80v104l200-200q23-23 56.5-23t56.5 23l337 336H696L416-800 216-600h104v80H80Z" />
+              </svg>
+            </button>
                         
             <button class="ctrl-btn" id="pipBtn" title="Picture in Picture">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
