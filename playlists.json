@@ -10,13 +10,18 @@
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png"
   },
   {
-    "name": "FiFaWorldCup with Toffee (Reliable)",
+    "name": "FiFaWC 🤝 Toffee (Reliable)",
     "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/m3u/toffee_worldcup.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee_%26_fifa.png"
   },
   {
-    "name": "FIFA LIVE",
+    "name": "FiFaWC 🤝 Bangladesh (Reliable)",
     "url": "https://summer-firefly-d294.marufhossainkeyas.workers.dev/",
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Fifa_2026.png"
+  },
+  {
+    "name": "FIFA LIVE 🏆",
+    "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/m3u/ts.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Fifa_2026.png"
   },
   {
@@ -33,11 +38,6 @@
     "name": "Fancode Sports (Premium)",
     "url": "https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/fancode.png"
-  },
-  {
-    "name": "Willow Sports (Premium)",
-    "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/m3u/FIFA%20BD.m3u",
-    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/willow.jpg"
   },
   {
     "name": "Axsports (Sports)",
