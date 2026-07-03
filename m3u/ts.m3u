@@ -1,7 +1,10 @@
 #EXTM3U
 
-#EXTINF:-1 group-title="Bangladesh",Bioscope Plus 🇧🇩
+#EXTINF:-1 group-title="Bangladesh" tvg-logo="https://raw.githubusercontent.com/shamimpipon/Shamim-live-tv/refs/heads/main/bios.png",Bioscope Plus 🇧🇩
 https://bioscope.sm-monirulislam-exp.workers.dev/bioscope.m3u8
+#EXTINF:-1 tvg-id="iscreenhd" tvg-name="I SCREEN HD" tvg-logo="https://platform.rockstreamer.com/platforms/iscreen.com.bd/assets/logo.png" group-title="Bangladesh",I Screen HD 🇧🇩
+#EXTVLCOPT:http-referrer=https://iscreen.com.bd/
+https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8
 #EXTINF:-1 group-title="Bangladesh",Z Bangla HD 🇧🇩
 https://d1g8wgjurz8via.cloudfront.net/bpk-tv/ColorsHD/default/Zeebanglahd.m3u8
 
