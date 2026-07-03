@@ -11,6 +11,7 @@ https://m3u-tvb.pages.dev/ics.m3u8
 #EXTVLCOPT:http-referrer=https://iscreen.com.bd/
 https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8
 
+
 #EXTINF:-1 tvg-id="foxsports" tvg-name="Fox Sports FHD" group-title="US/LATAM",Fox Sports FHD 🇺🇸
 #KODIPROP:inputstream=inputstream.adaptive
 #KODIPROP:inputstream.adaptive.manifest_type=mpd
