@@ -1,33 +1,28 @@
 #EXTM3U
 
-# ---------- HLS : Multi Audio + Subtitles ----------
-#EXTINF:-1 tvg-id="apple.bipbop" group-title="Player Test",Apple BipBop (Multi Audio + CC)
-https://devstreaming-cdn.apple.com/videos/streaming/examples/img_bipbop_adv_example_ts/master.m3u8
+#EXTINF:-1 tvg-id="bioscopeplus" tvg-name="Bioscope+ FIFA" tvg-logo="https://static.wikia.nocookie.net/etv-gspn-bangla/images/8/82/Bioscope%2B.png" group-title="FIFA",Bioscope+ (FIFA - CF)
+#EXTVLCOPT:http-host=fifa.keralive.workers.dev
+#EXTVLCOPT:http-origin=https://tulnit.com
+#EXTVLCOPT:http-referrer=https://tulnit.com/
+https://d1kep4defqj6r1.cloudfront.net/out/v1/4e21d5a122c549289dd6feab259266e8/index.m3u8
 
-# ---------- DASH : Multi Audio ----------
-#EXTINF:-1 tvg-id="angel.one" group-title="Player Test",Angel One (DASH Multi Audio)
-https://storage.googleapis.com/shaka-demo-assets/angel-one/dash.mpd
+#EXTINF:-1 tvg-id="bioscopeplus2" tvg-name="Bioscope+ FIFA Alt" tvg-logo="https://static.wikia.nocookie.net/etv-gspn-bangla/images/8/82/Bioscope%2B.png" group-title="FIFA",Bioscope+ (FIFA - Alt, needs auth header)
+https://fifa-stream-01.bioscopelive.com/out/v1/60e7608404004b1186261497b404630b/index.m3u8|x-authorization=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMzI0NTg2MTU0MzM5NjE0NzIiLCJhdWQiOlsiMSJdLCJleHAiOjE4MTM4NTQ4NjgsIm5iZiI6MTc4MjMxODg2OCwiaWF0IjoxNzgyMzE4ODY4LCJqdGkiOiIwMmY3Y2Y2M2I5OTFiMjY0Mzk0YmU2MjE0ZDJhNzI4MWYzZTExNWFkMGE4OGJhZTBmYTcyZjkwMTJmOTJmNGU1ZTA1N2Y3NGMxOGViODQzYyIsInNjb3BlcyI6WyJtYW5hZ2VfcHJvZmlsZXMiXSwicGlkIjoiMjMyNDU4Njc1MjYyMDA1MjQ4In0.kr0qIPfh66MktNCEAW_AcqFPzzX58VdP2JkVNzOjiOaig25qi9H6rttTcnKzJZoHD0Urj6YEom2S3Z_VujPXSugq9UXPFrzFbBA9zD-nMDgsNQrBr15K2uTAweqTClFduLPLyi-JvZWXpq8UbHybjhoen-Q3nRyHzOsQakQp8nRhR2yUYCiDBjwDPzF56WCVUWAYr1M19xRyiGJTqLmDI1KrT8CXwVdZFBZWqAptUnFMI6TEcoFSsRSMhN9_8KZCXbezExsToFIPbnIxp7ZPDD-qGT-KZ4GfPWrBUS93fiR4p8UzHn9Q3Bwba_mTxq3Fy8OhHilKCefoVTmyngBHwodjTOw8D9JkYc5-16QmYS6tBGbdgPRHKklTgkNYDlrQHCSQuNLTI_pRskw5oygUXkudpiPcUM9IFz8ud-rbbxVii-0ISXtwUIaEv_HBf_aA9cCGttN7ZdEquMTxbIhR27EMTwj5RdgE-i64iH__Xv3Ua4A5tzJjA5XR9Cqrsa3k84uCJlk74Z-8KBpvTcbMjAOhtqZOfimw736vSBgV9Xdk4dsoxpIfg90g38tfvCgYSwDgq5ulxTl3ygq7kS6BY1kT2m_R1T2Xdorm-75kbJ9iTn9IGa9PruwtmrtLlbuT2uivaw3E05U_UCrMwqeFZslbGtjAij95j083wmxXqUQ
 
-# ---------- DASH : VOD ----------
-#EXTINF:-1 tvg-id="sintel" group-title="Player Test",Sintel (DASH)
-https://storage.googleapis.com/shaka-demo-assets/sintel/dash.mpd
+#EXTINF:-1 tvg-id="bingeplus" tvg-name="Binge+" tvg-logo="https://upload.wikimedia.org/wikipedia/commons/6/64/Logo_of_Binge.svg" group-title="Bangladesh",Binge+ 🇧🇩
+#EXTVLCOPT:http-referrer=https://iscreen.com.bd/
+https://m3u-tvb.pages.dev/ics.m3u8
 
-# ---------- DASH : VOD ----------
-#EXTINF:-1 tvg-id="heliocentrism" group-title="Player Test",Heliocentrism (DASH)
-https://storage.googleapis.com/shaka-demo-assets/heliocentrism/heliocentrism.mpd
+#EXTINF:-1 group-title="Bangladesh" tvg-logo="https://raw.githubusercontent.com/shamimpipon/Shamim-live-tv/refs/heads/main/bios.png",Bioscope Plus 🇧🇩
+https://bioscope.sm-monirulislam-exp.workers.dev/bioscope.m3u8
 
-# ---------- HLS : Live ----------
-#EXTINF:-1 tvg-id="iptv.org.aljazeera" group-title="Live",Al Jazeera English
-https://live-hls-web-aje.getaj.net/AJE/index.m3u8
+#EXTINF:-1 tvg-id="iscreenhd" tvg-name="I SCREEN HD" tvg-logo="https://platform.rockstreamer.com/platforms/iscreen.com.bd/assets/logo.png" group-title="Bangladesh",I Screen HD 🇧🇩
+#EXTVLCOPT:http-referferrer=https://iscreen.com.bd/
+https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8
 
-# ---------- HLS : Live ----------
-#EXTINF:-1 tvg-id="nasa.tv" group-title="Live",NASA TV
-https://ntv1-lh.akamaihd.net/i/NASA_101@319270/master.m3u8
-
-# ---------- HLS : Big Buck Bunny ----------
-#EXTINF:-1 tvg-id="bbb" group-title="VOD",Big Buck Bunny
-https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8
-
-# ---------- HLS : Tears of Steel ----------
-#EXTINF:-1 tvg-id="tos" group-title="VOD",Tears of Steel
-https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8
+#EXTINF:-1 tvg-id="foxsports" tvg-name="Fox Sports FHD" group-title="US/LATAM",Fox Sports FHD 🇺🇸
+#KODIPROP:inputstream=inputstream.adaptive
+#KODIPROP:inputstream.adaptive.manifest_type=mpd
+#KODIPROP:inputstream.adaptive.license_type=clearkey
+#KODIPROP:inputstream.adaptive.license_key=f6564ec2aee819046328a0e153be574d:ff46a8a1031eb27ef22576a077c98ab7
+https://otte.cache.aiv-cdn.net/bom-nitro/live/clients/enc/ajfoeddkbz/out/v1/b78800b9b2304879b15843f455836829/cenc.mpd
