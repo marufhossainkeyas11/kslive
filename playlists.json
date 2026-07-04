@@ -30,6 +30,11 @@
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Fifa_2026.png"
   },
   {
+    "name": "CRICKET LIVE",
+    "url": "https://throbbing-wood-f62f.marufhossainkeyas.workers.dev/Cricket",
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Cricket.png"
+  },
+  {
     "name": "Akash Go (Reliable)",
     "url": "https://raw.githubusercontent.com/srhady/Hady/refs/heads/main/akash_live.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Akash_Go.png"
@@ -43,10 +48,5 @@
     "name": "Fancode Sports (Premium)",
     "url": "https://raw.githubusercontent.com/srhady/Fancode-bd/refs/heads/main/main_playlist.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/fancode.png"
-  },
-  {
-    "name": "Axsports (Sports)",
-    "url": "https://raw.githubusercontent.com/srhady/axsports/refs/heads/main/playlist.m3u",
-    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/axsports.jpg"
   }
 ]
