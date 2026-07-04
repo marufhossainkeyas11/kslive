@@ -8,6 +8,11 @@
     "name": "Toffee (Premium)",
     "url": "https://toffee-stream-keeper.lovable.app/toffee.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png"
+  },  
+  {
+    "name": "Akash Go (Reliable)",
+    "url": "https://raw.githubusercontent.com/srhady/Hady/refs/heads/main/akash_live.m3u",
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Akash_Go.png"
   },
   {
     "name": "FiFaWC 🤝 Toffee (Reliable)",
@@ -16,11 +21,6 @@
   },
   {
     "name": "FiFaWC 🤝 Bangladesh (Reliable)",
-    "url": "https://summer-firefly-d294.marufhossainkeyas.workers.dev/",
-    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/bangladesh_%26_fifa.png"
-  },
-  {
-    "name": "2.0 FiFaWC 🤝 Bangladesh (Reliable)",
     "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/m3u/FIFA%20BD.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/bangladesh_%26_fifa.png"
   },
@@ -35,14 +35,14 @@
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Cricket.png"
   },
   {
-    "name": "Akash Go (Reliable)",
-    "url": "https://raw.githubusercontent.com/srhady/Hady/refs/heads/main/akash_live.m3u",
-    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/Akash_Go.png"
-  },
-  {
     "name": "Tapmad Sports (Premium)",
     "url": "https://raw.githubusercontent.com/srhady/tapmad-bd/refs/heads/main/tapmad_bd.m3u",
     "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/tapmad.png"
+  },
+  {
+    "name": "Willow Sports (Premium)",
+    "url": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/m3u/FIFA%20BD.m3u",
+    "image": "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/willow.jpg"
   },
   {
     "name": "Fancode Sports (Premium)",
