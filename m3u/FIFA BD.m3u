@@ -17,20 +17,20 @@ https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315f
 #KODIPROP:inputstream.adaptive.license_key=f6564ec2aee819046328a0e153be574d:ff46a8a1031eb27ef22576a077c98ab7
 https://otte.cache.aiv-cdn.net/bom-nitro/live/clients/enc/ajfoeddkbz/out/v1/b78800b9b2304879b15843f455836829/cenc.mpd
 
-#EXTINF:-1 tvg-id="Fifa" tvg-name="TSports 1" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 1
+#EXTINF:-1 tvg-id="tsports" tvg-name="TSports 1" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 1
 https://tvdd.easypecker.com/TSportsHD_sf_bdix/index.m3u8
 
-#EXTINF:-1 tvg-id="Fifa" tvg-name="TSports 2" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 2
+#EXTINF:-1 tvg-id="tsports" tvg-name="TSports 2" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 2
 https://tvdd.easypecker.com/TSportsHD_sf_nix/index.m3u8
 
-#EXTINF:-1 tvg-id="Fifa" tvg-name="TSports 3" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 3
+#EXTINF:-1 tvg-id="tsports" tvg-name="TSports 3" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 3
 https://tvdd.easypecker.com/TSportsHD_nk_nix/index.m3u8
 
-#EXTINF:-1 tvg-id="Fifa" tvg-name="TSports 4" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 4
+#EXTINF:-1 tvg-id="tsports" tvg-name="TSports 4" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 4
 https://tvdd.easypecker.com/TSportsHD_nk_bdix/index.m3u8
 
-#EXTINF:-1 tvg-id="Fifa" tvg-name="TSports 5" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 5
+#EXTINF:-1 tvg-id="tsports" tvg-name="TSports 5" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 5
 https://tvdd.easypecker.com/ptv_bdix/index.m3u8
 
-#EXTINF:-1 tvg-id="Fifa" tvg-name="TSports 6" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 6
+#EXTINF:-1 tvg-id="tsports" tvg-name="TSports 6" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 6
 https://tvdd.easypecker.com/ptv_nix/index.m3u8
