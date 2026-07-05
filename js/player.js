@@ -152,8 +152,27 @@ function parseM3U(text) {
     }
     
     if (current && !line.startsWith('#') && line.length > 0) {
+    // ── Pipe শর্টহ্যান্ড: url|key=value|key2=value2 ──
+    const pipeIdx = line.indexOf('|');
+    if (pipeIdx !== -1) {
+      current.url = line.slice(0, pipeIdx);
+      const paramsStr = line.slice(pipeIdx + 1);
+      paramsStr.split('|').forEach(pair => {
+        const eqIdx = pair.indexOf('=');
+        if (eqIdx === -1) return;
+        const k = pair.slice(0, eqIdx).trim().toLowerCase();
+        const v = pair.slice(eqIdx + 1).trim();
+        if (!k || !v) return;
+        if (k === 'referer' || k === 'referrer') current.referrer = v;
+        else if (k === 'user-agent' || k === 'ua') current.userAgent = v;
+        else if (k === 'cookie') current.cookies = v;
+        else current.headers[k] = v; // x-authorization, x-forwarded-for ইত্যাদি generic header
+      });
+    } else {
       current.url = line;
-      const hdrs = { ...current.headers };
+    }
+    
+    const hdrs = { ...current.headers };
       if (current.userAgent) hdrs['User-Agent'] = current.userAgent;
       if (current.referrer) hdrs['Referer'] = current.referrer;
       if (current.cookies) hdrs['Cookie'] = current.cookies;
