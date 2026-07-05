@@ -10,12 +10,14 @@ https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315f
 #EXTVLCOPT:http-referrer=https://iscreen.com.bd/
 https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8
 
-#EXTINF:-1 tvg-id="foxsports" tvg-name="Fox Sports" tvg-logo="https://d1eipm3vz40hy0.cloudfront.net/images/Customer+Stories+/FOXSportsMexico/FSM_App_Resize.png" group-title="Fox Sports",Fox Sports
-#KODIPROP:inputstream=inputstream.adaptive
-#KODIPROP:inputstream.adaptive.manifest_type=mpd
-#KODIPROP:inputstream.adaptive.license_type=clearkey
-#KODIPROP:inputstream.adaptive.license_key=f6564ec2aee819046328a0e153be574d:ff46a8a1031eb27ef22576a077c98ab7
-https://otte.cache.aiv-cdn.net/bom-nitro/live/clients/enc/ajfoeddkbz/out/v1/b78800b9b2304879b15843f455836829/cenc.mpd
+#EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 1" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 1
+https://cdn-tt.pages.dev/ch1.m3u8
+
+#EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 2" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 2
+https://cdn-tt.pages.dev/ch2.m3u8
+
+#EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 3" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 3
+https://cdn-tt.pages.dev/ch3.m3u8
 
 #EXTINF:-1 tvg-id="tsports" tvg-name="TSports 1" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 1
 https://tvdd.easypecker.com/TSportsHD_sf_bdix/index.m3u8
