@@ -6,11 +6,11 @@ https://fifa-stream-01.bioscopelive.com/out/v1/60e7608404004b1186261497b404630b/
 #EXTINF:-1 tvg-id="bingeplus" tvg-name="Binge+" tvg-logo="https://bangladeshpost.net/webroot/uploads/featureimage/2023-09/6500673102280.jpg" group-title="Binge+",Binge+ 
 https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8|referer=https://iscreen.com.bd/
 
-#EXTINF:-1 tvg-id="iscreenhd" tvg-name="I SCREEN HD" tvg-logo="https://www.apkmirror.com/wp-content/themes/APKMirror/ap_resize/ap_resize.php?src=https%3A%2F%2Fdownloadr2.apkmirror.com%2Fwp-content%2Fuploads%2F2023%2F03%2F95%2F64151441afbce.png" group-title="I Screen",I Screen
+#EXTINF:-1 tvg-id="iscreenhd" tvg-name="I Screen" tvg-logo="https://www.apkmirror.com/wp-content/themes/APKMirror/ap_resize/ap_resize.php?src=https%3A%2F%2Fdownloadr2.apkmirror.com%2Fwp-content%2Fuploads%2F2023%2F03%2F95%2F64151441afbce.png" group-title="I Screen",I Screen
 #EXTVLCOPT:http-referrer=https://iscreen.com.bd/
 https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8
 
-#EXTINF:-1 tvg-id="foxsports" tvg-name="Fox Sports FHD" tvg-logo="https://d1eipm3vz40hy0.cloudfront.net/images/Customer+Stories+/FOXSportsMexico/FSM_App_Resize.png" group-title="Fox Sports",Fox Sports FHD
+#EXTINF:-1 tvg-id="foxsports" tvg-name="Fox Sports" tvg-logo="https://d1eipm3vz40hy0.cloudfront.net/images/Customer+Stories+/FOXSportsMexico/FSM_App_Resize.png" group-title="Fox Sports",Fox Sports
 #KODIPROP:inputstream=inputstream.adaptive
 #KODIPROP:inputstream.adaptive.manifest_type=mpd
 #KODIPROP:inputstream.adaptive.license_type=clearkey
