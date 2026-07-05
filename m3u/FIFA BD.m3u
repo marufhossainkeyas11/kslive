@@ -6,7 +6,7 @@ https://fifa-stream-01.bioscopelive.com/out/v1/60e7608404004b1186261497b404630b/
 #EXTINF:-1 tvg-id="bingeplus" tvg-name="Binge+" tvg-logo="https://bangladeshpost.net/webroot/uploads/featureimage/2023-09/6500673102280.jpg" group-title="Binge+",Binge+ 
 https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8|referer=https://iscreen.com.bd/
 
-#EXTINF:-1 tvg-id="iscreenhd" tvg-name="I SCREEN HD" tvg-logo="https://www.apkmirror.com/wp-content/themes/APKMirror/ap_resize/ap_resize.php?src=https%3A%2F%2Fdownloadr2.apkmirror.com%2Fwp-content%2Fuploads%2F2023%2F03%2F95%2F64151441afbce.png&w=512&h=512" group-title="I Screen",I Screen
+#EXTINF:-1 tvg-id="iscreenhd" tvg-name="I SCREEN HD" tvg-logo="https://www.apkmirror.com/wp-content/themes/APKMirror/ap_resize/ap_resize.php?src=https%3A%2F%2Fdownloadr2.apkmirror.com%2Fwp-content%2Fuploads%2F2023%2F03%2F95%2F64151441afbce.png" group-title="I Screen",I Screen
 #EXTVLCOPT:http-referrer=https://iscreen.com.bd/
 https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8
 
@@ -29,8 +29,3 @@ https://tvdd.easypecker.com/TSportsHD_nk_nix/index.m3u8
 #EXTINF:-1 tvg-id="tsports" tvg-name="TSports 4" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 4
 https://tvdd.easypecker.com/TSportsHD_nk_bdix/index.m3u8
 
-#EXTINF:-1 tvg-id="tsports" tvg-name="TSports 5" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 5
-https://tvdd.easypecker.com/ptv_bdix/index.m3u8
-
-#EXTINF:-1 tvg-id="tsports" tvg-name="TSports 6" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 6
-https://tvdd.easypecker.com/ptv_nix/index.m3u8
