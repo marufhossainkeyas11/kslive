@@ -76,6 +76,9 @@ body {
   border-bottom: 1px solid var(--bdr);
   flex-shrink: 0;
   z-index: 100;
+  margin-bottom: 10px;
+  border-radius: 0 0 15px 15px;
+  box-shadow: 0px -2px 10px #0000008A;
 }
 
 .logo {
@@ -1409,7 +1412,7 @@ video {
   .playlist-tabs { display: none; }
 
   .topbar {
-    padding: 0 10px;
+    padding: 33px 10px 25px 10px;
     justify-content: space-between;
     height: 52px;
   }
