@@ -8,6 +8,7 @@
     MAX_WINDOW_HOURS: 28,
     LIVE_LEAD_MINUTES: 15,
     Z_INDEX: 98,
+    MORPH_MS: 500, // expand/collapse animation duration
   };
 
   const STATE = {
@@ -17,6 +18,11 @@
     lastRenderKey: "",
     posX: null,
     posY: null,
+    // NEW: which match id occupies which fixed slot.
+    // Slot positions never move — only which match renders in them changes.
+    topId: null,
+    bottomId: null,
+    morphing: false,
   };
 
   // ---------- date/time formatting ----------
@@ -142,8 +148,12 @@
       width: 34px; height: 34px;
       display: flex; align-items: center; justify-content: center;
       overflow: hidden;
+      transition: width ${CONFIG.MORPH_MS}ms cubic-bezier(.34,1.2,.4,1), height ${CONFIG.MORPH_MS}ms cubic-bezier(.34,1.2,.4,1);
     }
-    #kslive-widget .kslive-team img { width: 34px; height: 34px; object-fit: cover;  }
+    #kslive-widget .kslive-team img {
+      width: 34px; height: 34px; object-fit: cover;
+      transition: width ${CONFIG.MORPH_MS}ms cubic-bezier(.34,1.2,.4,1), height ${CONFIG.MORPH_MS}ms cubic-bezier(.34,1.2,.4,1);
+    }
     #kslive-widget .kslive-team span {
       font-size: 11px; color: rgba(255,255,255,0.85); font-weight: 600;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 68px;
@@ -189,12 +199,45 @@
       letter-spacing: .1px;
     }
 
-    #kslive-widget .kslive-secondary {
+    /* ---------- slot wrappers ----------
+       Top and bottom are FIXED positions. Only their *contents*
+       (which match renders inside) change on click. */
+    #kslive-widget .kslive-slot {
       position: relative;
       z-index: 1;
+    }
+    #kslive-widget .kslive-slot-top {
+      margin-bottom: 0;
+    }
+    #kslive-widget .kslive-slot-bottom {
       margin-top: 10px;
       padding-top: 10px;
       border-top: 1px solid rgba(255,255,255,0.08);
+      cursor: pointer;
+    }
+
+    /* Morph animation layer: both slots fade/scale their inner content
+       when swapping which match occupies them. Telegram-esque: shrink+fade
+       out, then the new content grows+fades in from a slightly smaller scale. */
+    #kslive-widget .kslive-slot-inner {
+      transition:
+        opacity ${CONFIG.MORPH_MS}ms cubic-bezier(.34,1.2,.4,1),
+        transform ${CONFIG.MORPH_MS}ms cubic-bezier(.34,1.2,.4,1);
+      transform-origin: center top;
+    }
+    #kslive-widget .kslive-slot-inner.kslive-morph-out {
+      opacity: 0;
+      transform: scale(0.88);
+    }
+    #kslive-widget .kslive-slot-top .kslive-slot-inner.kslive-morph-out {
+      transform: scale(0.9) translateY(-4px);
+    }
+    #kslive-widget .kslive-slot-bottom .kslive-slot-inner.kslive-morph-out {
+      transform: scale(1.06) translateY(2px);
+    }
+
+    #kslive-widget .kslive-secondary {
+      position: relative;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -204,7 +247,10 @@
     #kslive-widget .kslive-secondary .kslive-sec-flags {
       display: flex; align-items: center; gap: 6px;
     }
-    #kslive-widget .kslive-secondary img { width: 16px; height: 16px; object-fit: cover; }
+    #kslive-widget .kslive-secondary img {
+      width: 16px; height: 16px; object-fit: cover;
+      transition: width ${CONFIG.MORPH_MS}ms cubic-bezier(.34,1.2,.4,1), height ${CONFIG.MORPH_MS}ms cubic-bezier(.34,1.2,.4,1);
+    }
     #kslive-widget .kslive-secondary .kslive-sec-score {
       font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums;
       color: rgba(255,255,255,0.85);
@@ -218,7 +264,7 @@
     }
 
     @media (max-width: 380px) {
-      #kslive-widget { width: 202px; }
+      #kslive-widget { width: 230px; }
       #kslive-widget .kslive-team { width: 60px; }
       #kslive-widget .kslive-score { font-size: 20px; }
     }
@@ -270,7 +316,8 @@
     return `<div class="kslive-team-logo"><img src="${team.logo || ""}" alt="${alt}" onerror="this.parentElement.style.visibility='hidden'"></div>`;
   }
 
-  function renderPrimary(match) {
+  // Full detailed view — used in the TOP slot only.
+  function renderDetailed(match) {
     if (match._isLive) {
       return `
         <div class="kslive-badge live"><span class="kslive-dot"></span>LIVE</div>
@@ -311,7 +358,8 @@
     `;
   }
 
-  function renderSecondary(match) {
+  // Compact single-row view — used in the BOTTOM slot only.
+  function renderCompact(match) {
     if (match._isLive) {
       return `
         <div class="kslive-secondary">
@@ -355,6 +403,33 @@
     return str.replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
   }
 
+  function findById(list, id) {
+    return list.find((m) => m.id === id) || null;
+  }
+
+  // Decide which match id sits in top/bottom slot, preserving the user's
+  // choice across polls as long as that match is still relevant. Falls back
+  // to default ordering (live/soonest first) otherwise.
+  function resolveSlots(relevant) {
+    const [defaultTop, defaultBottom] = relevant;
+    let top = STATE.topId ? findById(relevant, STATE.topId) : null;
+    let bottom = STATE.bottomId ? findById(relevant, STATE.bottomId) : null;
+
+    if (!top && !bottom) {
+      top = defaultTop || null;
+      bottom = defaultBottom || null;
+    } else if (top && !bottom) {
+      bottom = relevant.find((m) => m.id !== top.id) || null;
+    } else if (!top && bottom) {
+      top = relevant.find((m) => m.id !== bottom.id) || null;
+    }
+    // if both resolved but relevant now only has 1 match, bottom naturally stays null via findById
+
+    STATE.topId = top ? top.id : null;
+    STATE.bottomId = bottom ? bottom.id : null;
+    return { top, bottom };
+  }
+
   function render() {
     const container = ensureContainer();
     if (STATE.hidden) {
@@ -365,56 +440,120 @@
     const relevant = getRelevantMatches(STATE.matches);
     if (relevant.length === 0) {
       container.classList.remove("kslive-visible");
+      STATE.topId = null;
+      STATE.bottomId = null;
+      STATE.lastRenderKey = "";
       return;
     }
 
-    const [first, second] = relevant;
+    const { top, bottom } = resolveSlots(relevant);
+    if (!top) {
+      container.classList.remove("kslive-visible");
+      return;
+    }
 
-    // Only rebuild HTML when the underlying match/state changes — keeps countdown
-    // ticking smooth and avoids disrupting drag.
-    const cardKey = first.id + "|" + first._isLive + "|" + (second ? second.id + "|" + second._isLive : "");
     const card = container.querySelector(".kslive-card");
+    const cardKey = top.id + "|" + top._isLive + "|" + (bottom ? bottom.id + "|" + bottom._isLive : "");
 
     if (STATE.lastRenderKey !== cardKey) {
-      card.innerHTML = `
-        <div class="kslive-close" data-kslive-close>&times;</div>
-        ${renderPrimary(first)}
-        ${second ? renderSecondary(second) : ""}
-      `;
-      card.querySelector("[data-kslive-close]").addEventListener("click", (e) => {
-        e.stopPropagation();
-        hideWidget();
-      });
+      buildSlots(card, top, bottom);
       STATE.lastRenderKey = cardKey;
     } else {
-      updateCountdownNumbers(card, first, second);
+      updateLiveNumbers(card, top, bottom);
     }
 
     requestAnimationFrame(() => container.classList.add("kslive-visible"));
   }
 
-  function updateCountdownNumbers(card, first, second) {
-    if (!first._isLive) {
-      const d = getCountdownParts(first._diff);
-      const units = card.querySelectorAll(".kslive-countdown .unit b");
+  function buildSlots(card, top, bottom) {
+    card.innerHTML = `
+      <div class="kslive-close" data-kslive-close>&times;</div>
+      <div class="kslive-slot kslive-slot-top" data-slot="top">
+        <div class="kslive-slot-inner">${renderDetailed(top)}</div>
+      </div>
+      ${bottom ? `
+      <div class="kslive-slot kslive-slot-bottom" data-slot="bottom" data-kslive-swap="${bottom.id}">
+        <div class="kslive-slot-inner">${renderCompact(bottom)}</div>
+      </div>` : ""}
+    `;
+    card.querySelector("[data-kslive-close]").addEventListener("click", (e) => {
+      e.stopPropagation();
+      hideWidget();
+    });
+    const bottomSlot = card.querySelector('[data-slot="bottom"]');
+    if (bottomSlot) {
+      bottomSlot.addEventListener("click", (e) => {
+        e.stopPropagation();
+        swapSlots();
+      });
+    }
+  }
+
+  // Click on bottom slot -> it becomes top (detailed), old top becomes
+  // bottom (compact). Positions themselves never move; only the match
+  // assigned to each position changes, with a morph-out/morph-in transition.
+  function swapSlots() {
+    if (STATE.morphing) return;
+    const relevant = getRelevantMatches(STATE.matches);
+    const currentTop = findById(relevant, STATE.topId);
+    const currentBottom = findById(relevant, STATE.bottomId);
+    if (!currentBottom) return;
+
+    STATE.morphing = true;
+    const container = document.getElementById("kslive-widget");
+    const card = container.querySelector(".kslive-card");
+    const topInner = card.querySelector('.kslive-slot-top .kslive-slot-inner');
+    const bottomInner = card.querySelector('.kslive-slot-bottom .kslive-slot-inner');
+
+    const finishSwap = () => {
+      STATE.topId = currentBottom.id;
+      STATE.bottomId = currentTop ? currentTop.id : null;
+      STATE.lastRenderKey = ""; // force rebuild with new assignment
+      STATE.morphing = false;
+      render();
+    };
+
+    if (!topInner || !bottomInner) {
+      finishSwap();
+      return;
+    }
+
+    topInner.classList.add("kslive-morph-out");
+    bottomInner.classList.add("kslive-morph-out");
+
+    let done = false;
+    const onEnd = () => {
+      if (done) return;
+      done = true;
+      finishSwap();
+    };
+    topInner.addEventListener("transitionend", onEnd, { once: true });
+    // Safety fallback in case transitionend doesn't fire (e.g. tab throttling)
+    setTimeout(onEnd, CONFIG.MORPH_MS + 80);
+  }
+
+  function updateLiveNumbers(card, top, bottom) {
+    if (top._isLive) {
+      const scoreEl = card.querySelector(".kslive-slot-top .kslive-score");
+      if (scoreEl) scoreEl.textContent = `${top.home.score} : ${top.away.score}`;
+    } else {
+      const d = getCountdownParts(top._diff);
+      const units = card.querySelectorAll(".kslive-slot-top .kslive-countdown .unit b");
       if (units.length === 4) {
         units[0].textContent = d.days;
         units[1].textContent = d.hours;
         units[2].textContent = d.minutes;
         units[3].textContent = d.seconds;
       }
-    } else {
-      const scoreEl = card.querySelector(".kslive-score");
-      if (scoreEl) scoreEl.textContent = `${first.home.score} : ${first.away.score}`;
     }
-    if (second) {
-      if (second._isLive) {
-        const secScore = card.querySelector(".kslive-sec-score");
-        if (secScore) secScore.textContent = `${second.home.score} : ${second.away.score}`;
+    if (bottom) {
+      if (bottom._isLive) {
+        const secScore = card.querySelector(".kslive-slot-bottom .kslive-sec-score");
+        if (secScore) secScore.textContent = `${bottom.home.score} : ${bottom.away.score}`;
       } else {
-        const secTime = card.querySelector(".kslive-sec-time");
+        const secTime = card.querySelector(".kslive-slot-bottom .kslive-sec-time");
         if (secTime) {
-          const d = getCountdownParts(second._diff);
+          const d = getCountdownParts(bottom._diff);
           secTime.textContent = d.days > 0
             ? `${d.days}d ${d.hours}h left`
             : `${d.hours}h ${d.minutes}m left`;
