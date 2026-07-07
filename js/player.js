@@ -105,9 +105,14 @@ function parseM3U(text) {
       if (val.startsWith('{')) {
         try {
           const json = JSON.parse(val);
-          if (json.cookie) current.cookies = json.cookie;
-          if (json['user-agent']) current.userAgent = json['user-agent'];
-          if (json.referrer || json.referer) current.referrer = json.referrer || json.referer;
+          Object.entries(json).forEach(([k, v]) => {
+            if (!v) return;
+            const lk = k.toLowerCase();
+            if (lk === 'cookie') current.cookies = v;
+            else if (lk === 'user-agent') current.userAgent = v;
+            else if (lk === 'referrer' || lk === 'referer') current.referrer = v;
+            else current.headers[lk] = v;
+          });
         } catch (e) { /* malformed JSON, skip */ }
         continue;
       }
