@@ -1425,6 +1425,20 @@ video {
   .info-panel { padding: 12px; }
   .ch-detail-name { font-size: 15px; }
   .vol-slider { width: 60px; }
+  .channel-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    align-content: start;
+  }
+  .ch-item {
+    min-width: 0;  
+    background: var(--o-sm);
+    border-color: var(--bdr);
+  }
+  .ch-group-label {
+    grid-column: 1 / -1;
+  }
 }
 
 /* ── SMALL MOBILE: vol slider → more menu only ── */
