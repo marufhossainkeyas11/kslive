@@ -20,6 +20,9 @@ https://cdn-tt.pages.dev/ch2.m3u8
 #EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 3" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 3
 https://cdn-tt.pages.dev/ch3.m3u8
 
+#EXTINF:-1 tvg-id="somoytv" tvg-name="Somoy TV" tvg-logo="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuaoe32xECUYsRui0O-n8NJ8TiBgbsR_LoVQ&s" group-title="Somoy TV",Somoy TV
+https://live.thebosstv.com:30443/dwlive/Somoy-TV/chunks.m3u8
+
 #EXTINF:-1 tvg-id="tsports" tvg-name="TSports 1" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 1
 https://tvdd.easypecker.com/TSportsHD_sf_bdix/index.m3u8
 
@@ -31,4 +34,5 @@ https://tvdd.easypecker.com/TSportsHD_nk_nix/index.m3u8
 
 #EXTINF:-1 tvg-id="tsports" tvg-name="TSports 4" tvg-logo="https://aboutme.b-cdn.net/background/users/t/s/p/tsportslite_1738813359_958.jpg" group-title="TSports",TSports 4
 https://tvdd.easypecker.com/TSportsHD_nk_bdix/index.m3u8
+
 
