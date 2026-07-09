@@ -1,23 +1,16 @@
 /* ═══════════════════════════════════════════════════════════════════════
-   KSLIVE PLAYER CORE — v3
+   KSLIVE PLAYER CORE — v4
    State, M3U parsing, network, and the dual stream engine (HLS.js + Shaka).
-
-   KEY FIX vs v2: every channel load now carries a monotonically increasing
-   "load token". Any async work that started for an older token (proxy
-   retry, DRM peek, HLS/Shaka error recovery, .play() promises) checks the
-   token before touching shared state or the <video> element. This kills
-   the whole class of "switched channel mid-load and the old stream's
-   error handler still fires and stomps the new one" bugs.
    ═══════════════════════════════════════════════════════════════════════ */
 
 /* ───────────────────────────────────────────────────────
    PLAYLIST CONFIG
    ─────────────────────────────────────────────────────── */
-const PLAYLISTS_JSON_URL = "https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/playlists.json";
+const PLAYLISTS_JSON_URL = "./playlists.json";
 let PLAYLISTS = [];
 
 /* ───────────────────────────────────────────────────────
-   UNIVERSAL PROXY HELPER — MULTI-WORKER POOL
+   UNIVERSAL PROXY HELPER — MULTI-WORKER POOL (PING-SELECTED)
    ─────────────────────────────────────────────────────────
    WHY THIS EXISTS:
    A single Cloudflare Worker doesn't have a "CPU time" ceiling that adding
@@ -27,26 +20,34 @@ let PLAYLISTS = [];
    more Cloudflare accounts, so no single account's subrequest/bandwidth
    headroom becomes the bottleneck for everyone at once.
 
-   DESIGN:
-   - WORKER_POOL lists every deployed worker (same worker.js, different
-     Cloudflare accounts).
-   - Each browser tab gets one random SESSION_ID (persisted in
-     sessionStorage — per tab, not shared across tabs/devices).
-   - That SESSION_ID deterministically picks one worker from the pool for
-     the whole viewing session — sticky, so channel switches don't reshuffle
-     it needlessly, and so worker.js's own segment-rewriting (which keys on
-     this same sid) stays consistent with what the player started with.
-   - If the picked worker fails/times out, it's marked unhealthy for a
-     cooldown window and this session moves to the next candidate — a
-     failing worker stops getting new sessions routed to it until it
-     recovers, no manual restart needed.
+   HOW WORKER SELECTION WORKS (v4 — ping-based, replaces hash-only pick):
+   - On every page load, we fire a lightweight GET (no ?url= param, so
+     worker.js answers instantly with its built-in health-check JSON —
+     see worker.js's `if (!target) return jsonRes(...)` branch) at EVERY
+     pool member IN PARALLEL, with a short timeout.
+   - Whichever responds fastest is picked as this tab's worker for the
+     session. A dead/slow/overloaded worker will naturally lose that race,
+     so viewers organically drift away from a struggling account without
+     any manual intervention.
+   - This ping result is cached in sessionStorage so we don't re-ping on
+     every single segment request — just once per fresh page load/reload,
+     which is exactly the "per reload, suggest a worker" behavior wanted.
+   - If ALL pings fail or take too long (e.g. offline, or first paint
+     before network is ready), we fall back to the old deterministic
+     session-hash pick so playback still has a sane default.
+   - Mid-session, if the chosen worker starts failing requests, the
+     existing health-cooldown + reportWorkerFailureAndGetFallback() logic
+     (unchanged) takes over — ping-selection just picks the *starting*
+     worker each reload; the failure-fallback logic handles the rest of
+     the session if that pick turns out to be having a bad day.
    ─────────────────────────────────────────────────────── */
 const WORKER_POOL = [
    "https://multiproxy.learndetailcoding.workers.dev/",
-   "https://multiproxy.keyas-ntsc.workers.dev/", 
+   "https://multiproxy.keyas-ntsc.workers.dev/",
    "https://multiproxy.marufhossainkeyas.workers.dev/",
 ];
 
+const WORKER_PING_TIMEOUT_MS = 2500;   // don't let a dead worker hold up boot for long
 const WORKER_UNHEALTHY_COOLDOWN_MS = 60_000; // stop routing new sessions to a failing worker for 1 min
 const _workerHealth = new Map(); // origin -> { badUntil: timestamp }
 
@@ -83,11 +84,65 @@ function getSessionId() {
   }
 }
 
-/** Pick this session's worker from the currently-healthy slice of the pool. */
-function pickSessionWorker() {
+/** Deterministic fallback pick — used only if pinging every worker failed. */
+function pickSessionWorkerByHash() {
   const pool = healthyPool();
   if (pool.length <= 1) return pool[0];
   return pool[hashStr(getSessionId()) % pool.length];
+}
+
+/**
+ * Ping every pool member's health-check endpoint in parallel and return
+ * the origin that answered fastest. Resolves to null if every ping fails
+ * or none answer within WORKER_PING_TIMEOUT_MS.
+ */
+async function raceWorkersForFastest(pool) {
+  const attempts = pool.map(origin => new Promise(resolve => {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => { ctrl.abort(); resolve(null); }, WORKER_PING_TIMEOUT_MS);
+    const started = performance.now();
+    fetch(origin, { method: 'GET', signal: ctrl.signal, cache: 'no-store' })
+      .then(res => {
+        clearTimeout(timer);
+        if (res.ok) resolve({ origin, ms: performance.now() - started });
+        else resolve(null);
+      })
+      .catch(() => { clearTimeout(timer); resolve(null); });
+  }));
+
+  const results = (await Promise.all(attempts)).filter(Boolean);
+  if (!results.length) return null;
+  results.sort((a, b) => a.ms - b.ms);
+  return results[0].origin;
+}
+
+/**
+ * This tab's chosen worker for the whole session. Resolved once at boot
+ * (see primePreferredWorker(), called from init()) and cached in
+ * sessionStorage so a reload re-pings, but repeated calls within the same
+ * load don't re-ping on every single manifest/segment request.
+ */
+let _preferredWorker = null;
+
+async function primePreferredWorker() {
+  try {
+    const cached = sessionStorage.getItem('ks_worker');
+    if (cached && WORKER_POOL.includes(cached)) {
+      _preferredWorker = cached;
+      return;
+    }
+  } catch {}
+
+  const fastest = await raceWorkersForFastest(healthyPool());
+  _preferredWorker = fastest || pickSessionWorkerByHash();
+
+  try { sessionStorage.setItem('ks_worker', _preferredWorker); } catch {}
+}
+
+/** Pick this session's worker — ping-selected if primed, else deterministic fallback. */
+function pickSessionWorker() {
+  if (_preferredWorker && isWorkerHealthy(_preferredWorker)) return _preferredWorker;
+  return pickSessionWorkerByHash();
 }
 
 /** Base64url-encode the pool so worker.js can spread nested manifest rewrites too. */
@@ -131,6 +186,7 @@ function reportWorkerFailureAndGetFallback(failedProxyUrl, targetUrl, headers = 
   try {
     const failedOrigin = new URL(failedProxyUrl).origin;
     markWorkerUnhealthy(failedOrigin);
+    if (_preferredWorker === failedOrigin) _preferredWorker = null; // stop preferring it this session
     const candidates = healthyPool().filter(o => o !== failedOrigin);
     if (!candidates.length) return null;
     const fallbackOrigin = candidates[hashStr(getSessionId() + ':retry') % candidates.length];
@@ -574,6 +630,12 @@ async function fetchM3U(pl) {
 async function init() {
   setLoadingMsg('Loading channel config…');
 
+  // Ping every worker in the pool now, in parallel with the playlist
+  // fetch below (not awaited sequentially before it) so pinging never
+  // adds to perceived boot time — by the time the user picks a channel,
+  // this has almost always already resolved.
+  const workerPingPromise = primePreferredWorker();
+
   try {
     const res = await fetchWithTimeout(PLAYLISTS_JSON_URL + '?t=' + Date.now(), {}, 10_000);
     PLAYLISTS = await res.json();
@@ -617,6 +679,11 @@ async function init() {
 
   buildPlaylistTabs();
   if (state.playlists.length > 0) switchPlaylist(0);
+
+  // Make sure the worker ping has resolved before the very first channel
+  // load actually needs to pick a worker (playChannel below fires
+  // loadStream synchronously). Usually already done by now.
+  await workerPingPromise;
 
   const last = loadLastChannel();
   if (last && state.playlists[last.plIdx]?.channels[last.chIdx]) {
