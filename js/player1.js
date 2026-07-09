@@ -42,11 +42,9 @@ let PLAYLISTS = [];
      recovers, no manual restart needed.
    ─────────────────────────────────────────────────────── */
 const WORKER_POOL = [
-  "https://dawn-boat-eca4.marufhossainkeyas.workers.dev",
-  // Deploy the SAME worker.js to your other Cloudflare accounts, then add
-  // each one's *.workers.dev URL here (no trailing slash), e.g.:
-  // "https://your-worker-name.your-2nd-account.workers.dev",
-  // "https://your-worker-name.your-3rd-account.workers.dev",
+   "https://multiproxy.learndetailcoding.workers.dev/",
+   "https://multiproxy.keyas-ntsc.workers.dev/", 
+   "https://multiproxy.marufhossainkeyas.workers.dev/",
 ];
 
 const WORKER_UNHEALTHY_COOLDOWN_MS = 60_000; // stop routing new sessions to a failing worker for 1 min
