@@ -12,13 +12,16 @@ https://fifa-stream-01.bioscopelive.com/out/v1/60e7608404004b1186261497b404630b/
 https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8
 
 #EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 1" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 1
-https://cdn-tt.pages.dev/ch1.m3u8
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Linux; Android 9; Redmi S2 Build/PKQ1.181203.001) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.7049.79 Mobile Safari/537.36
+https://prod-cdn01-live.toffeelive.com/live/FIFA-2026/sst/index.m3u8?edge-cache-token=Expires=1783705739~Starts=1783698539~URLPrefix=aHR0cHM6Ly9wcm9kLWNkbjAxLWxpdmUudG9mZmVlbGl2ZS5jb20~Data=eyJzdWJzY3JpYmVyX2lkIjoiNmFhMDY0MWYtZjlmNi00ZmM4LTg3N2ItYzhiMWJhNzkwOWQwIn0~Signature=ruiyv9tEfHBYHFvXZfToLgdtJQBtz_qzwUbqHNWWXNHh6m_wfLV6QLEtxPzMuvk6Db9PYClSn0fpaqyXaMloBQ
 
 #EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 2" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 2
-https://cdn-tt.pages.dev/ch2.m3u8
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Linux; Android 9; Redmi S2 Build/PKQ1.181203.001) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.7049.79 Mobile Safari/537.36
+https://prod-cdn01-live.toffeelive.com/live/FIFA-2026-2/sst/index.m3u8?edge-cache-token=Expires=1783705739~Starts=1783698539~URLPrefix=aHR0cHM6Ly9wcm9kLWNkbjAxLWxpdmUudG9mZmVlbGl2ZS5jb20~Data=eyJzdWJzY3JpYmVyX2lkIjoiNmFhMDY0MWYtZjlmNi00ZmM4LTg3N2ItYzhiMWJhNzkwOWQwIn0~Signature=ruiyv9tEfHBYHFvXZfToLgdtJQBtz_qzwUbqHNWWXNHh6m_wfLV6QLEtxPzMuvk6Db9PYClSn0fpaqyXaMloBQ
 
 #EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 3" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 3
-https://cdn-tt.pages.dev/ch3.m3u8
+#EXTVLCOPT:http-user-agent=Mozilla/5.0 (Linux; Android 9; Redmi S2 Build/PKQ1.181203.001) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.7049.79 Mobile Safari/537.36
+https://prod-cdn01-live.toffeelive.com/live/FIFA-2026-3/sst/index.m3u8?edge-cache-token=Expires=1783705739~Starts=1783698539~URLPrefix=aHR0cHM6Ly9wcm9kLWNkbjAxLWxpdmUudG9mZmVlbGl2ZS5jb20~Data=eyJzdWJzY3JpYmVyX2lkIjoiNmFhMDY0MWYtZjlmNi00ZmM4LTg3N2ItYzhiMWJhNzkwOWQwIn0~Signature=ruiyv9tEfHBYHFvXZfToLgdtJQBtz_qzwUbqHNWWXNHh6m_wfLV6QLEtxPzMuvk6Db9PYClSn0fpaqyXaMloBQ
 
 #EXTINF:-1 tvg-id="somoytv" tvg-name="SomoyTv 1" tvg-logo="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuaoe32xECUYsRui0O-n8NJ8TiBgbsR_LoVQ&s" group-title="SomoyTv",SomoyTv 1
 https://live.thebosstv.com:30443/dwlive/Somoy-TV/chunks.m3u8
