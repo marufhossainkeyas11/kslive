@@ -12,10 +12,10 @@ https://fifa-stream-01.bioscopelive.com/out/v1/60e7608404004b1186261497b404630b/
 https://tc-sg.rockstreamer.com/v1/019ed91616121ea540a8171c8e801f/019ed92ac80315fc600b1796d4ad8b/main.m3u8
 
 #EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 1" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 1
-https://toffee.marufhossainkeyas.workers.dev/26
+https://toffee.marufhossainkeyas.workers.dev/26.m3u8
 
 #EXTINF:-1 tvg-id="toffee" tvg-name="Toffee 2" tvg-logo="https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/image/toffee.png" group-title="Toffee",Toffee 2
-https://toffee.marufhossainkeyas.workers.dev/27
+https://toffee.marufhossainkeyas.workers.dev/27.m3u8
 
 #EXTINF:-1 tvg-id="somoytv" tvg-name="SomoyTv 1" tvg-logo="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSuaoe32xECUYsRui0O-n8NJ8TiBgbsR_LoVQ&s" group-title="SomoyTv",SomoyTv 1
 https://live.thebosstv.com:30443/dwlive/Somoy-TV/chunks.m3u8
