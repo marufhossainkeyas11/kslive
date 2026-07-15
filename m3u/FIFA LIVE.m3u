@@ -1,4 +1,16 @@
 #EXTM3U
+#EXTINF:-1 group-title="Argentina va England", BD HD
+https://pull.niues.live/live/stream-9912060_lhd.m3u8?auth_key=1783284383-0-0-ba541e77b9330eab42075af6aa5029e4
+#EXTINF:-1 group-title="Argentina va England",FOX ONE - AQ
+https://ritzembeds.pages.dev/embed/fox-usa
+#EXTINF:-1 group-title="Argentina va England",TSN SPORTS FHD
+https://ritzembeds.pages.dev/embed/tsn1-ca
+#EXTINF:-1 group-title="Argentina va England",BBC SPORTS FHD
+https://ritzembeds.pages.dev/embed/bbcone-uk
+#EXTINF:-1 group-title="Argentina va England",DAZN FHD
+https://ritzembeds.pages.dev/embed/daznmundial-es
+#EXTINF:-1 group-title="Argentina va England",BEIN - AQ
+https://ritzembeds.pages.dev/embed/beinsportsmax-sa
 #EXTINF:-1 group-title="England vs Argentina",FOX ONE - AQ
 #KODIPROP:inputstream.adaptive.license_type=clearkey
 #KODIPROP:inputstream.adaptive.license_key=f6564ec2aee819046328a0e153be574d:ff46a8a1031eb27ef22576a077c98ab7
