@@ -41,11 +41,7 @@ let PLAYLISTS = [];
      worker each reload; the failure-fallback logic handles the rest of
      the session if that pick turns out to be having a bad day.
    ─────────────────────────────────────────────────────── */
-const WORKER_POOL = [
-   "https://multiproxy.learndetailcoding.workers.dev/",
-   "https://multiproxy.keyas-ntsc.workers.dev/",
-   "https://multiproxy.marufhossainkeyas.workers.dev/",
-];
+const WORKER_POOL = ["https://proxy.learndetailcoding.workers.dev/","https://proxy.keyas-ntsc.workers.dev/"];
 
 const WORKER_PING_TIMEOUT_MS = 2500;   // don't let a dead worker hold up boot for long
 const WORKER_UNHEALTHY_COOLDOWN_MS = 60_000; // stop routing new sessions to a failing worker for 1 min
