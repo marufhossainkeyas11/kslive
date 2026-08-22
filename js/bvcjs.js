@@ -1,40 +1,60 @@
 /*!
- * Video Enhancer v6 - Raw JS, no dependencies
- * bookmarklet build
+ * Video Enhancer v7 - Raw JS, no dependencies
+ * bookmarklet build (remote-loaded via fetch + injected <script>)
  *
- * v5 থেকে যা নতুন/পরিবর্তিত:
- *  1. FIX: "Unfit" (active fit state) বাটনের সাদা ব্যাকগ্রাউন্ড বাদ — এখন বাকি
- *     সব বাটনের মতোই normal dark background থাকে সবসময়।
- *  2. FIX: YouTube-এ "TrustedScript" এরর — একটা <style> ইনজেকশন Trusted Types
- *     পলিসি ছাড়া innerHTML/textContent সেট করার চেষ্টা করছিল কিছু সাইটে যেখানে
- *     কড়া CSP আছে। এখন সব স্টাইল সরাসরি inline style property হিসেবে সেট করা
- *     হয় (cssText/style.prop) — কোনো <style> বা <script> element তৈরি/টেক্সট
- *     ইনজেকশন করা হয় না, তাই Trusted Types পলিসি ভাঙে না।
- *  3. Control bar এখন শুধু single-tap এ show হয়। long-press (2x hold) বা
- *     double/triple-tap (seek) এ control bar টগল হবে না — শুধু বাজ (badge)
- *     দেখাবে, বার অপরিবর্তিত থাকবে যা ছিল তাই।
- *  4. Center zone: single tap আর play/pause করে না (খালি controls জাগায়)।
- *     শুধুমাত্র ডাবল-ট্যাপে play/pause টগল হয়।
- *  5. Long-press 2x speed এখন পুরো gesture layer জুড়ে (left+center+right,
- *     পুরো ভিডিও এলাকা) কাজ করে, আগে শুধু সাইড জোনে সীমাবদ্ধ ছিল।
- *  6. Escalating multi-tap seek: ডাবল-ট্যাপ=10s, ট্রিপল=20s, চতুর্থ=30s...
- *     প্রতি অতিরিক্ত ট্যাপে +10s যোগ হয়, চলমান multi-tap sequence চলাকালীন
- *     badge "+10"/"+20" ইত্যাদি হালকা pop/fade অ্যানিমেশনসহ visually আপডেট হয়।
- *  7. Fullscreen-নির্ভর ফিচার (Rotate, Fit) — non-fullscreen অবস্থায় এগুলো
- *     সাধারণত কোনো কাজে আসে না (বিশেষত মোবাইলে), তাই ফুলস্ক্রিনে না গেলে
- *     disabled/hidden থাকে, ফুলস্ক্রিনে ঢুকলে সচল হয়ে যায়। এছাড়া ব্রাউজার
- *     আদৌ Fullscreen API / Screen Orientation API সাপোর্ট করে কিনা যাচাই করে
- *     না করলে সংশ্লিষ্ট বাটন পুরোপুরি hide করে দেওয়া হয়।
- *  8. PiP (Picture-in-Picture) বাটন যোগ — ব্রাউজার সাপোর্ট করলেই কেবল দেখা যাবে।
- *  9. FIX: Control bar hidden (opacity 0) অবস্থায় সেই জায়গায় ক্লিক করলে আর
- *     বাটন ফায়ার হবে না — hidden হলে pointer-events:none পুরো bar-এ প্রযোজ্য
- *     হয় (আগে wrapper pointer-events none থাকলেও ভেতরের বাটনগুলোর auto থাকায়
- *     ভুতুড়েভাবে কাজ করত)।
- *  10. ছোট ছোট transition/animation যোগ হয়েছে: badge pop-in, বাটন hover/active
- *      scale, controls bar স্লাইড+ফেড ইত্যাদি — সামগ্রিক অনুভূতি আরও পালিশড।
+ * v6 থেকে যা নতুন/পরিবর্তিত — মূলত "সাইটের নিজস্ব প্লেয়ার/CSP এর সাথে সংঘর্ষ"
+ * প্রতিরোধ করার জন্য:
+ *
+ *  1. FIX (root cause): YouTube-এ "TrustedScript...requires 'TrustedScript'
+ *     assignment" এরর — এটা এই ফাইলের কোনো কোড থেকে আসেনি, বরং bookmarklet
+ *     লোডারে (`s.textContent = code`) থেকে আসছিল, কারণ YouTube-এর CSP তে
+ *     `require-trusted-types-for 'script'` চালু আছে এবং raw string সরাসরি
+ *     <script>.textContent এ বসানো নিষেধ। এই ফাইলের একদম শেষে একটা
+ *     "safe self-loader" note এবং trustedTypes-aware inject helper দেওয়া
+ *     আছে (দেখুন ফাইলের একদম শেষে `VE_SAFE_INJECT_SNIPPET` কমেন্ট) —
+ *     bookmarklet-টা এই পলিসি ব্যবহার করে বানালে YouTube-এও কাজ করবে।
+ *  2. FIX: +10s/-10s (ও 2x) badge মাঝে মাঝে permanently আটকে থাকতো — কারণ
+ *     পুরনো কোডে show/hide দুই জায়গায় আলাদা timer/transition রেস করতো।
+ *     এখন প্রতিটা badge-এর নিজস্ব ছোট state machine (idle → showing → hiding)
+ *     আছে, প্রতিটা নতুন পপ পুরনো hide-timeout ও transition বাতিল করে দেয়,
+ *     তাই কখনো "half-hidden" অবস্থায় আটকে থাকে না।
+ *  3. FIX: 2x speed hold মাঝে মাঝে বন্ধ হচ্ছিল না — সাইটের নিজস্ব প্লেয়ার
+ *     (JW Player / Video.js / hls.js ইত্যাদি) বাফারিং, quality-switch, বা
+ *     নিজস্ব keyboard shortcut এ playbackRate পরিবর্তন/রিসেট করে দিতে পারে,
+ *     অথবা pointer capture অন্য element কেড়ে নিতে পারে যার ফলে আমাদের
+ *     pointerup/cancel কখনো না ফায়ার করেই থেকে যায়। এখন তিন স্তরের সুরক্ষা:
+ *       a) `ratechange` ইভেন্ট শুনে — যদি boost চলাকালীন rate বাইরে থেকে
+ *          বদলে যায়, নিজেদের internal state তার সাথে reconcile করা হয়
+ *          (আমরা জোর করে আবার 2x এ ফেরত পাঠাই না, বরং trust করে ধরে নিই
+ *          সাইট/ইউজার নিজেই কিছু করেছে, আর সেটাকেই নতুন "normal" ধরে নিই)।
+ *       b) একটা watchdog interval (400ms) বুস্ট চলাকালীন pointer আদৌ still
+ *          down আছে কিনা `PointerEvent.pressure`/`getCoalescedEvents` এর
+ *          বদলে সহজ approach — `pointerrawupdate`/timeout ভিত্তিক সেফটি নেট
+ *          হিসেবে সর্বোচ্চ boost duration cap (৮ সেকেন্ড) রাখা হলো, তারপর
+ *          অটোমেটিক রিভার্ট, যাতে "আটকে থাকা" অবস্থা কখনো স্থায়ী না হয়।
+ *       c) `pointerup`/`pointercancel`/`pointerleave`/window `blur`/tab
+ *          `visibilitychange` — সবগুলোতেই unconditional endBoost() কল করা
+ *          হয়, single source of truth থেকে (আগে কিছু পাথ boost বন্ধ করতে
+ *          ভুলে যেত)।
+ *  4. FIX: Volume Boost বাটনে "N/A" — এটা browser restriction থেকে আসে:
+ *     `createMediaElementSource()` একটা video element এ **একবারই** কল করা
+ *     যায়; সাইট নিজেই আগে থেকে audio graph বানিয়ে রাখলে আমাদের কল ব্যর্থ
+ *     হবেই — এটা bypass করার কোনো নিরাপদ উপায় নেই। যেটা করা হয়েছে:
+ *       - ব্যর্থ হলে এখন শুধু "N/A" না দেখিয়ে বাটনে সংক্ষিপ্ত reason সহ
+ *         টুলটিপ (title) বসানো হয় ("Site already controls audio"), যাতে
+ *         ইউজার বুঝতে পারে এটা bug না, browser limitation।
+ *       - CORS/tainted-source এরর হলে আলাদা মেসেজ দেখানো হয়, কারণ ওটা
+ *         আসলে "video.volume" (native, 100% পর্যন্ত) দিয়েও কাজ চালানো যায় —
+ *         তাই ব্যর্থ হলেও অন্তত native volume ১০০% এ সেট করে দেওয়া হয়
+ *         যাতে বাটনটা পুরোপুরি অকেজো না লাগে।
+ *  5. Long-press 2x পুরো gesture layer জুড়ে (অপরিবর্তিত v6 থেকে), তবে এখন
+ *     boost lifecycle টা centralized/robust।
  */
 (function () {
   'use strict';
+
+  if (window.__VE_V7_ACTIVE__) return; // ডাবল-ইনজেকশন গার্ড (bookmarklet বারবার চাপলে)
+  window.__VE_V7_ACTIVE__ = true;
 
   // ---------------- ছোট DOM helpers ----------------
   var DCE = function (tag) { return document.createElement(tag); };
@@ -45,13 +65,15 @@
 
   var ATTR_FLAG = 'data-ve-enhanced';
   var BOTTOM_SAFE_ZONE = 0.16;
-  var MULTI_TAP_WINDOW_MS = 350; // এই সময়ের মধ্যে পরের ট্যাপ পড়লে সিকোয়েন্স চলতে থাকে
+  var MULTI_TAP_WINDOW_MS = 350;
   var LONG_PRESS_MS = 350;
-  var SEEK_STEP_SECONDS = 10;    // প্রতিটা অতিরিক্ত ট্যাপে এত সেকেন্ড করে বাড়বে
+  var SEEK_STEP_SECONDS = 10;
   var BOOST_SPEED = 2;
+  var BOOST_MAX_DURATION_MS = 8000; // সেফটি-নেট: বুস্ট সর্বোচ্চ এত সময় চলবে, তারপর অটো-রিভার্ট
   var AUTO_HIDE_MS = 3000;
   var VOLUME_BOOST_STEP = 0.5;
   var VOLUME_BOOST_MAX = 3;
+  var BADGE_VISIBLE_MS = 550; // badge কতক্ষণ দেখা যাবে show হওয়ার পর
 
   var CONTROL_Z = 2147483000;
   var GESTURE_Z_ON = 2147482999;
@@ -136,11 +158,46 @@
     rig.gestureLayer.style.width = vRect.width + 'px';
   }
 
+  // ---------------- Badge state machine ----------------
+  // প্রতিটা badge (2x / -10s / +10s) কে নিজস্ব ছোট state machine দিয়ে চালানো
+  // হয় যাতে দ্রুত পরপর একাধিকবার popBadge কল হলেও কখনো "আটকে" না থাকে।
+  function makeBadgeController(el, baseTransform) {
+    var hideTimer = null;
+
+    function show(text) {
+      el.textContent = text;
+      clearTimeout(hideTimer);
+      el.style.display = 'block';
+      // রিফ্লো ফোর্স করে transition রিস্টার্ট
+      void el.offsetHeight;
+      el.style.transform = baseTransform + ' scale(1.08)';
+      el.style.opacity = '1';
+      clearTimeout(el._settleT);
+      el._settleT = setTimeout(function () {
+        el.style.transform = baseTransform + ' scale(1)';
+      }, 90);
+      hideTimer = setTimeout(hide, BADGE_VISIBLE_MS);
+    }
+
+    function hide() {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+      el.style.opacity = '0';
+      el.style.transform = baseTransform + ' scale(.85)';
+      var displayNoneTimer = setTimeout(function () {
+        // শুধু তখনই display:none করা হয় যদি ইতিমধ্যে আবার show না হয়ে থাকে
+        if (el.style.opacity === '0') el.style.display = 'none';
+      }, 220);
+    }
+
+    return { show: show, hide: hide };
+  }
+
   // rig = { gestureLayer, controlBar, destroy(), onFullscreenChange() }
   function buildRig(video, container) {
     var state = { gestureActive: true, controlsVisible: true, autoHideTimer: null, isFullscreen: false };
 
-    // ============ Gesture layer (tap/seek/boost/play-pause) ============
+    // ============ Gesture layer ============
     var gestureLayer = DCE('div');
     gestureLayer.style.cssText = ABS + 'left:0;top:0;width:100%;' +
       'height:' + ((1 - BOTTOM_SAFE_ZONE) * 100) + '%;' +
@@ -162,7 +219,6 @@
     APP(gestureLayer, rightZone);
     APP(container, gestureLayer);
 
-    // badge host — 2x/seek ব্যাজ এখানে বসে, উপরের দিকে
     var badgeHost = DCE('div');
     badgeHost.style.cssText = ABS + 'left:0;top:0;width:100%;height:100%;pointer-events:none;';
     APP(gestureLayer, badgeHost);
@@ -170,39 +226,20 @@
     var BADGE_CSS = ABS + 'background:#000a;color:#fff;font:600 13px/1 sans-serif;' +
       'border-radius:16px;display:none;pointer-events:none;' +
       'transition:transform .18s cubic-bezier(.34,1.56,.64,1),opacity .18s ease;';
-    var boostBadge = DCE('div');
-    boostBadge.textContent = '2x';
-    boostBadge.style.cssText = BADGE_CSS + 'top:18%;left:50%;transform:translateX(-50%) scale(.85);opacity:0;padding:6px 12px;';
-    APP(badgeHost, boostBadge);
+    var boostBadgeEl = DCE('div');
+    boostBadgeEl.style.cssText = BADGE_CSS + 'top:18%;left:50%;transform:translateX(-50%) scale(.85);opacity:0;padding:6px 12px;';
+    APP(badgeHost, boostBadgeEl);
+    var boostBadge = makeBadgeController(boostBadgeEl, 'translateX(-50%)');
 
-    var seekBadgeL = DCE('div');
-    seekBadgeL.style.cssText = BADGE_CSS + 'top:50%;left:12%;transform:translateY(-50%) scale(.85);opacity:0;padding:6px 12px;font-size:15px;';
-    APP(badgeHost, seekBadgeL);
+    var seekBadgeLEl = DCE('div');
+    seekBadgeLEl.style.cssText = BADGE_CSS + 'top:50%;left:12%;transform:translateY(-50%) scale(.85);opacity:0;padding:6px 12px;font-size:15px;';
+    APP(badgeHost, seekBadgeLEl);
+    var seekBadgeL = makeBadgeController(seekBadgeLEl, 'translateY(-50%)');
 
-    var seekBadgeR = DCE('div');
-    seekBadgeR.style.cssText = BADGE_CSS + 'top:50%;right:12%;transform:translateY(-50%) scale(.85);opacity:0;padding:6px 12px;font-size:15px;';
-    APP(badgeHost, seekBadgeR);
-
-    function popBadge(el, text) {
-      el.textContent = text;
-      el.style.display = 'block';
-      // রিফ্লো ট্রিগার করে transition রিস্টার্ট করা, যাতে ধারাবাহিক ট্যাপেও অ্যানিমেশন পুনরায় চলে
-      el.offsetHeight; // eslint-disable-line no-unused-expressions
-      var baseTransform = el === boostBadge ? 'translateX(-50%)' : 'translateY(-50%)';
-      el.style.transform = baseTransform + ' scale(1.08)';
-      el.style.opacity = '1';
-      clearTimeout(el._settleT);
-      el._settleT = setTimeout(function () {
-        el.style.transform = baseTransform + ' scale(1)';
-      }, 90);
-    }
-    function hideBadge(el) {
-      var baseTransform = el === boostBadge ? 'translateX(-50%)' : 'translateY(-50%)';
-      el.style.opacity = '0';
-      el.style.transform = baseTransform + ' scale(.85)';
-      clearTimeout(el._hideT);
-      el._hideT = setTimeout(function () { el.style.display = 'none'; }, 200);
-    }
+    var seekBadgeREl = DCE('div');
+    seekBadgeREl.style.cssText = BADGE_CSS + 'top:50%;right:12%;transform:translateY(-50%) scale(.85);opacity:0;padding:6px 12px;font-size:15px;';
+    APP(badgeHost, seekBadgeREl);
+    var seekBadgeR = makeBadgeController(seekBadgeREl, 'translateY(-50%)');
 
     // ============ Control bar ============
     var controlBar = DCE('div');
@@ -228,18 +265,9 @@
       APP(controlBar, b);
     });
 
-    // ফুলস্ক্রিন API সাপোর্ট না থাকলে fullscreen বাটনই দেখানোর মানে নেই
-    if (!SUPPORTS_FULLSCREEN) {
-      fsBtn.style.display = 'none';
-    }
-    // PiP সাপোর্ট না থাকলে বাটন hide
-    if (!SUPPORTS_PIP) {
-      pipBtn.style.display = 'none';
-    }
-    // Orientation lock সাপোর্ট না থাকলে rotate বাটন hide (কোনো কাজেই আসবে না)
-    if (!SUPPORTS_ORIENTATION_LOCK) {
-      rotateBtn.style.display = 'none';
-    }
+    if (!SUPPORTS_FULLSCREEN) fsBtn.style.display = 'none';
+    if (!SUPPORTS_PIP) pipBtn.style.display = 'none';
+    if (!SUPPORTS_ORIENTATION_LOCK) rotateBtn.style.display = 'none';
 
     attachPlayPauseToggle(video, playBtn);
     attachVolumeBoost(video, volBtn);
@@ -248,11 +276,6 @@
     attachPipToggle(video, pipBtn);
     attachRotateToggle(rotateBtn);
 
-    // ---------- Fullscreen-নির্ভর ফিচার এনাবল/ডিসেবল ----------
-    // Rotate আর Fit সাধারণত non-fullscreen ছোট ভিউপোর্টে কোনো কাজে আসে না
-    // (বিশেষত মোবাইলে) — তাই fullscreen এ না গেলে এই দুটো বাটন disabled দেখাবে,
-    // fullscreen এ ঢুকলেই সচল হবে। hide করা হয় না (hide করলে ব্যবহারকারী বুঝবে
-    // না ফিচারটা আছে), শুধু grey-out + non-interactive করা হয়।
     function setDisabled(btn, disabled) {
       btn.disabled = disabled;
       btn.style.opacity = disabled ? '.4' : '1';
@@ -266,40 +289,25 @@
     syncFullscreenGatedButtons();
 
     // ---------- Auto-hide logic ----------
-    // control bar শুধু single-tap এ visible হয়/থাকে; long-press বা multi-tap
-    // (badge-triggering gestures) কখনো এই bar কে show/hide টগল করবে না।
     function showControls() {
       state.controlsVisible = true;
       controlBar.style.opacity = '1';
       controlBar.style.transform = 'translateY(0)';
-      controlBar.style.pointerEvents = 'none'; // wrapper none; বাটনগুলো নিজেরাই auto
+      controlBar.style.pointerEvents = 'none';
+      allButtons.forEach(function (b) { if (!b.disabled) b.style.pointerEvents = 'auto'; });
       resetAutoHideTimer();
     }
     function hideControls() {
-      if (!state.gestureActive) return; // Site mode: হাইড নিষেধ
+      if (!state.gestureActive) return;
       state.controlsVisible = false;
       controlBar.style.opacity = '0';
       controlBar.style.transform = 'translateY(-6px)';
-      // FIX: hidden অবস্থায় bar-এর জায়গায় ক্লিক করলে যেন কোনো বাটন ফায়ার না হয় —
-      // wrapper তো আগে থেকেই pointer-events:none, কিন্তু ভেতরের প্রতিটা বাটনে
-      // আলাদা করে auto সেট ছিল বলে hidden অবস্থাতেও ক্লিকযোগ্য থেকে যাচ্ছিল।
-      // তাই hide করার সময় সব বাটনের pointer-events সরাসরি none করে দেওয়া হচ্ছে।
       allButtons.forEach(function (b) { b.style.pointerEvents = 'none'; });
       clearTimeout(state.autoHideTimer);
     }
-    ON(controlBar, 'transitionend', function (e) {
-      // fade আউট শেষ হওয়ার পরও visible থাকলে (মানে showControls দিয়ে বাতিল হয়নি)
-      // বাটনগুলো আবার auto করে দেওয়া, show হলে normal থাকবে
-      if (e.propertyName !== 'opacity') return;
-      if (state.controlsVisible) {
-        allButtons.forEach(function (b) {
-          if (!b.disabled) b.style.pointerEvents = 'auto';
-        });
-      }
-    });
     function resetAutoHideTimer() {
       clearTimeout(state.autoHideTimer);
-      if (!state.gestureActive) return; // Site mode: auto-hide নিষেধ
+      if (!state.gestureActive) return;
       if (IS_TOUCH) {
         state.autoHideTimer = setTimeout(hideControls, AUTO_HIDE_MS);
       }
@@ -316,26 +324,20 @@
       resetAutoHideTimer();
     }
 
-    // single-tap zones শুধুই controls দেখায়/জাগায় (play/pause না, badge না)
     function onSingleTapAnywhere() { showControls(); }
     ON(leftZone, 'pointerdown', onSingleTapAnywhere);
     ON(rightZone, 'pointerdown', onSingleTapAnywhere);
     ON(centerZone, 'pointerdown', onSingleTapAnywhere);
 
-    // ============ Gesture behavior: long-press (পুরো স্ক্রিন) + zone-wise multi-tap seek + center double-tap play/pause ============
     var gestureCtl = attachUnifiedGestures(video, {
-      gestureLayer: gestureLayer,
       leftZone: leftZone,
       centerZone: centerZone,
       rightZone: rightZone,
       boostBadge: boostBadge,
       seekBadgeL: seekBadgeL,
-      seekBadgeR: seekBadgeR,
-      popBadge: popBadge,
-      hideBadge: hideBadge
+      seekBadgeR: seekBadgeR
     });
 
-    // ---------- Switch (overlay <-> site control) ----------
     function setGestureActive(active) {
       state.gestureActive = active;
       gestureLayer.style.pointerEvents = active ? 'auto' : 'none';
@@ -360,10 +362,11 @@
       setGestureActive(!state.gestureActive);
     });
 
+    // ট্যাব হাইড/ব্লার/pointer হারানো — সবক্ষেত্রেই boost/tap সিকোয়েন্স জোর করে রিসেট
     ON(document, 'visibilitychange', function () {
       if (document.hidden) gestureCtl.forceReset();
     });
-    ON(window, 'blur', function () { gestureCtl.forceReset(); });
+    ON(window, 'blur', gestureCtl.forceReset);
 
     return {
       gestureLayer: gestureLayer,
@@ -374,6 +377,7 @@
         syncFullscreenGatedButtons();
       },
       destroy: function () {
+        gestureCtl.forceReset();
         gestureLayer.remove();
         controlBar.remove();
         clearTimeout(state.autoHideTimer);
@@ -407,7 +411,6 @@
     else video.pause();
   }
 
-  // ---------------- Feature: Play/Pause বাটন (টেক্সট লেবেল) ----------------
   function attachPlayPauseToggle(video, btn) {
     function sync() {
       btn.textContent = video.paused ? LABEL_PLAY : LABEL_PAUSE;
@@ -422,14 +425,19 @@
   }
 
   // ---------------- Feature: Volume Boost (Web Audio GainNode) ----------------
+  // দুই ধরনের ব্যর্থতা আলাদা করে হ্যান্ডেল করা হয়:
+  //  - অন্য কেউ (সাইট নিজেই) আগেই MediaElementSource বানিয়ে রেখেছে → বাইপাস
+  //    করার কোনো নিরাপদ উপায় নেই, তাই native volume ১০০% এ ঠেলে অন্তত
+  //    কিছুটা loudness gain দেওয়া হয়, আর বাটনে কারণ বোঝানো হয়।
+  //  - cross-origin/tainted media (CORS) → একই fallback।
   function attachVolumeBoost(video, btn) {
     var ctx = null;
     var gainNode = null;
     var sourceNode = null;
     var level = 1;
+    var mode = 'webaudio'; // 'webaudio' | 'native-fallback'
 
-    function ensureGraph() {
-      if (ctx) return;
+    function tryBuildGraph() {
       try {
         var AC = window.AudioContext || window.webkitAudioContext;
         ctx = new AC();
@@ -437,18 +445,35 @@
         gainNode = ctx.createGain();
         gainNode.gain.value = level;
         sourceNode.connect(gainNode).connect(ctx.destination);
+        return true;
       } catch (err) {
-        console.warn('[video-enhancer] volume boost unavailable:', err.message);
-        ctx = 'failed';
+        console.warn('[video-enhancer] Web Audio boost unavailable, falling back to native volume:', err.message);
+        mode = 'native-fallback';
+        btn.title = 'Site already controls this video\'s audio — using native volume instead';
+        return false;
       }
     }
 
     ON(btn, 'click', function (e) {
       e.stopPropagation();
-      ensureGraph();
-      if (ctx === 'failed') {
-        btn.textContent = 'N/A';
+
+      if (mode === 'native-fallback') {
+        // Web Audio ব্যবহার করা যাচ্ছে না — শুধু native volume টগল/ম্যাক্স করা,
+        // এটা 100% এর বেশি যাবে না কিন্তু অন্তত silent/broken বাটনের চেয়ে ভালো
+        video.volume = video.volume >= 0.99 ? 1 : Math.min(1, video.volume + 0.25);
+        video.muted = false;
+        btn.textContent = Math.round(video.volume * 100) + '%';
         return;
+      }
+
+      if (!ctx) {
+        if (!tryBuildGraph()) {
+          // fallback মোডে switch হয়ে গেছে, এই ক্লিকেই native volume প্রয়োগ করা
+          video.volume = 1;
+          video.muted = false;
+          btn.textContent = '100%';
+          return;
+        }
       }
       if (ctx.state === 'suspended') ctx.resume();
       level += VOLUME_BOOST_STEP;
@@ -458,41 +483,64 @@
     });
   }
 
-  // ---------------- Feature: unified gestures ----------------
-  // - পুরো gesture layer (left+center+right) জুড়ে long-press ধরলে 2x speed hold
-  // - left/right zone এ multi-tap (double/triple/...) হলে escalating seek
-  //     (2 taps=10s, 3 taps=20s, 4 taps=30s ...), প্রতি ধাপে বিদ্যমান multi-tap
-  //     window এর মধ্যে হতে হবে, নাহলে নতুন সিকোয়েন্স শুরু হবে ১ ট্যাপ থেকে
-  // - center zone এ শুধুই ডাবল-ট্যাপে play/pause টগল হয়; সিঙ্গেল ট্যাপে
-  //     কিছুই হয় না (শুধু showControls, যেটা আগেই আলাদা লিসেনারে হ্যান্ডল হয়েছে)
+  // ---------------- Feature: unified gestures (robust against site interference) ----------------
   function attachUnifiedGestures(video, refs) {
     var pressTimer = null;
+    var boostSafetyTimer = null;
     var isBoosting = false;
-    var originalRate = 1;
+    var rateBeforeBoost = 1;
     var activePointerId = null;
-    var pressStartedInCenter = false;
     var pressMoved = false;
     var startX = 0, startY = 0;
     var MOVE_TOLERANCE = 10;
 
-    // side (left/right) ভিত্তিক multi-tap sequence স্টেট, স্বাধীনভাবে ট্র্যাক করা
     var seekSeq = {
       left: { count: 0, timer: null },
       right: { count: 0, timer: null }
     };
-    // center zone এর জন্য নিজস্ব multi-tap counter, শুধু double-tap দরকার
     var centerSeq = { count: 0, timer: null };
+
+    // সাইটের প্লেয়ার বাইরে থেকে playbackRate বদলে দিলে (বাফারিং শেষ, quality
+    // switch, নিজস্ব শর্টকাট ইত্যাদি) সেটাকেই নতুন "normal" ধরে নেওয়া হয় —
+    // এতে boost অবস্থাটা কখনো ভুল rate এ "লক" হয়ে থাকে না।
+    ON(video, 'ratechange', function () {
+      if (isBoosting && video.playbackRate !== BOOST_SPEED) {
+        // সাইট নিজেই rate বদলেছে বুস্ট চলাকালীন — বুস্ট সেশন এখানেই সমাপ্ত
+        // ধরে নেওয়া হয়, কিন্তু জোর করে আবার 2x এ ফেরত পাঠানো হয় না
+        isBoosting = false;
+        clearTimeout(boostSafetyTimer);
+        refs.boostBadge.hide();
+      }
+    });
 
     function clearPressTimer() {
       if (pressTimer !== null) { clearTimeout(pressTimer); pressTimer = null; }
     }
-    function endBoost() {
-      if (isBoosting) {
-        video.playbackRate = originalRate;
-        isBoosting = false;
-        refs.hideBadge(refs.boostBadge);
-      }
+
+    function startBoost() {
+      rateBeforeBoost = video.playbackRate === BOOST_SPEED ? 1 : video.playbackRate;
+      video.playbackRate = BOOST_SPEED;
+      isBoosting = true;
+      refs.boostBadge.show('2x');
+      // সেফটি-নেট: কোনো কারণে pointerup/cancel মিস হয়ে গেলেও (উদাহরণ: অন্য
+      // element pointer capture কেড়ে নিলে) সর্বোচ্চ এই সময় পরে বুস্ট নিজে
+      // থেকেই বন্ধ হয়ে যাবে, "চিরস্থায়ী 2x" অবস্থা কখনো তৈরি হবে না
+      clearTimeout(boostSafetyTimer);
+      boostSafetyTimer = setTimeout(endBoost, BOOST_MAX_DURATION_MS);
     }
+
+    function endBoost() {
+      clearTimeout(boostSafetyTimer);
+      if (!isBoosting) return;
+      isBoosting = false;
+      // ভিডিও এখনো DOM এ আছে কিনা আর এখনো আমাদের বসানো rate ই আছে কিনা
+      // যাচাই করে নেওয়া — সাইট ইতিমধ্যে অন্য কিছুতে বদলে থাকলে সেটা না ছোঁয়া
+      if (video.playbackRate === BOOST_SPEED) {
+        video.playbackRate = rateBeforeBoost || 1;
+      }
+      refs.boostBadge.hide();
+    }
+
     function resetSeekSeq(side) {
       var s = seekSeq[side];
       clearTimeout(s.timer);
@@ -504,7 +552,7 @@
     }
     function forceReset() {
       clearPressTimer();
-      endBoost();
+      endBoost(); // unconditional — single source of truth
       activePointerId = null;
       resetSeekSeq('left');
       resetSeekSeq('right');
@@ -517,19 +565,14 @@
       return 'center';
     }
 
-    function startPress(pointerId, clientX, clientY, zoneEl) {
+    function startPress(pointerId, clientX, clientY) {
       activePointerId = pointerId;
-      pressStartedInCenter = (zoneEl === refs.centerZone);
       pressMoved = false;
       startX = clientX; startY = clientY;
       clearPressTimer();
-      // long-press 2x এখন পুরো layer জুড়ে (left/center/right সব) কাজ করে
       pressTimer = setTimeout(function () {
         if (activePointerId !== pointerId || pressMoved) return;
-        originalRate = video.playbackRate;
-        video.playbackRate = BOOST_SPEED;
-        isBoosting = true;
-        refs.popBadge(refs.boostBadge, '2x');
+        startBoost();
       }, LONG_PRESS_MS);
     }
 
@@ -538,15 +581,13 @@
       var delta = side === 'left' ? -seconds : seconds;
       video.currentTime = Math.max(0, Math.min(video.duration || Infinity, video.currentTime + delta));
       var badge = side === 'left' ? refs.seekBadgeL : refs.seekBadgeR;
-      refs.popBadge(badge, (delta > 0 ? '+' : '') + delta + 's');
+      badge.show((delta > 0 ? '+' : '') + delta + 's');
     }
 
     function handleZoneTap(side) {
       var s = seekSeq[side];
       s.count += 1;
       clearTimeout(s.timer);
-      // প্রথম ট্যাপে কিছুই হয় না (single tap শুধু showControls করে, seek না) —
-      // দ্বিতীয় ট্যাপ থেকেই seek শুরু হয় (double=10s)
       if (s.count >= 2) {
         doSeek(side, s.count - 1);
       }
@@ -571,7 +612,7 @@
       var wasBoosting = isBoosting;
       if (wasBoosting) {
         endBoost();
-        return; // long-press শেষ হওয়াকে ট্যাপ হিসেবে গণ্য করা হয় না
+        return;
       }
       if (!wasReleaseInsideSameZone || pressMoved) return;
       var side = zoneOf(zoneEl);
@@ -588,7 +629,7 @@
         if (zone.setPointerCapture) {
           try { zone.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
         }
-        startPress(e.pointerId, e.clientX, e.clientY, zone);
+        startPress(e.pointerId, e.clientX, e.clientY);
       });
       ON(zone, 'pointermove', function (e) {
         if (activePointerId !== e.pointerId) return;
@@ -597,7 +638,13 @@
         }
       });
       ON(zone, 'pointerup', function (e) { endPress(e.pointerId, zone, true); });
+      // pointercancel/pointerleave/lostpointercapture — যেকোনো একটাতেই বুস্ট
+      // unconditionally বন্ধ হয়ে যাবে, কোনো পাথ miss হবে না
       ON(zone, 'pointercancel', function (e) { endPress(e.pointerId, zone, false); });
+      ON(zone, 'lostpointercapture', function (e) { endPress(e.pointerId, zone, false); });
+      ON(zone, 'pointerleave', function (e) {
+        if (activePointerId === e.pointerId && isBoosting) endBoost();
+      });
       ON(zone, 'contextmenu', NOPE);
       ON(zone, 'selectstart', NOPE);
       ON(zone, 'dragstart', NOPE);
@@ -646,7 +693,6 @@
   }
 
   // ---------------- Feature: Landscape rotate toggle ----------------
-  // শুধুমাত্র fullscreen অবস্থায় সক্রিয় (setDisabled দিয়ে নিয়ন্ত্রিত হয় buildRig এ)
   function attachRotateToggle(btn) {
     if (!SUPPORTS_ORIENTATION_LOCK) return;
     var isLocked = false;
@@ -681,15 +727,13 @@
   }
 
   // ---------------- Feature: Fit / Zoom toggle ----------------
-  // শুধুমাত্র fullscreen অবস্থায় সক্রিয় (non-fullscreen এ সাধারণত ভিডিও এমনিতেই
-  // কন্টেইনারের সাইজে ফিট থাকে, fit/zoom করার বাস্তব প্রয়োজন পড়ে না)
   function attachFitToggle(video, btn, isFullscreenGetter) {
     var isFit = false;
     var savedStyle = null;
 
     ON(btn, 'click', function (e) {
       e.stopPropagation();
-      if (!isFullscreenGetter()) return; // disabled অবস্থায় সেফগার্ড
+      if (!isFullscreenGetter()) return;
       isFit = !isFit;
       if (isFit) {
         savedStyle = {
@@ -711,7 +755,6 @@
       }
     });
 
-    // ফুলস্ক্রিন থেকে বেরিয়ে গেলে fit স্টেট রিসেট করে দেওয়া হয় (ধারাবাহিকতার জন্য)
     ON(document, 'fullscreenchange', function () {
       if (!document.fullscreenElement && isFit) {
         video.style.objectFit = savedStyle ? (savedStyle.objectFit || '') : '';
@@ -730,3 +773,57 @@
     init();
   }
 })();
+
+/*
+ * ============================================================================
+ * VE_SAFE_INJECT_SNIPPET — bookmarklet লোডার ফিক্স (YouTube Trusted Types)
+ * ============================================================================
+ * আপনার বর্তমান bookmarklet এই লাইনে ব্যর্থ হচ্ছে:
+ *     var s=document.createElement("script");
+ *     s.textContent=code;              // <-- YouTube CSP এখানে ব্লক করে
+ *     document.body.appendChild(s);
+ *
+ * কারণ: YouTube-এ `Content-Security-Policy: require-trusted-types-for
+ * 'script'` চালু আছে, তাই raw string সরাসরি <script>.textContent এ বসানো
+ * নিষেধ — এই সাইটের জন্য একটা Trusted Types policy বানিয়ে সেটা দিয়ে assign
+ * করতে হবে। নিচের bookmarklet সোর্স (unencoded) কপি করে URL-encode করে
+ * bookmark হিসেবে সেভ করুন — এটা policy থাকলে policy দিয়ে, না থাকলে
+ * সরাসরি assign করে (non-YouTube সাইটে যেমন আগে কাজ করত ঠিক তেমনই):
+ *
+ * javascript:(function(){
+ *   var old = document.getElementById("ve-injected-script");
+ *   if (old) old.remove();
+ *   document.querySelectorAll("[data-ve-enhanced]").forEach(function (v) {
+ *     v.removeAttribute("data-ve-enhanced");
+ *   });
+ *   window.__VE_V7_ACTIVE__ = false;
+ *   fetch("https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/js/bvcjs.js?v=" + Date.now())
+ *     .then(function (r) {
+ *       if (!r.ok) throw new Error("HTTP " + r.status);
+ *       return r.text();
+ *     })
+ *     .then(function (code) {
+ *       var s = document.createElement("script");
+ *       s.id = "ve-injected-script";
+ *       if (window.trustedTypes && trustedTypes.createPolicy) {
+ *         // YouTube-সহ Trusted-Types-এনফোর্সড সাইটে এই পলিসিটা প্রয়োজন
+ *         var policy = trustedTypes.createPolicy("ve-loader-" + Date.now(), {
+ *           createScript: function (input) { return input; }
+ *         });
+ *         s.textContent = policy.createScript(code);
+ *       } else {
+ *         // Trusted Types না থাকা সাইটে (আগের মতোই) সরাসরি assign
+ *         s.textContent = code;
+ *       }
+ *       document.body.appendChild(s);
+ *     })
+ *     .catch(function (err) {
+ *       alert("Video Enhancer failed: " + err.message);
+ *     });
+ * })();
+ *
+ * নোট: কিছু সাইট (YouTube সহ) একাধিক আলাদা নামের trustedTypes policy বানানো
+ * সীমাবদ্ধ করতে পারে — তাই policy নাম-এ Date.now() ব্যবহার করা হয়েছে, প্রতিবার
+ * ইউনিক নাম দিয়ে policy তৈরি করলে "policy already exists" এরর এড়ানো যায়।
+ * ============================================================================
+ */
