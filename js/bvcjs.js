@@ -1,16 +1,26 @@
 /*!
- * Video Enhancer v2 - Raw JS, no dependencies
- * bookmarklet build
+ * Video Enhancer v3 - Raw JS, no dependencies
+ * বাগ ফিক্স + রিডিজাইন — bookmarklet build
+ *
+ * এই ভার্সনে যা ঠিক করা হয়েছে (v2 থেকে):
+ *  1. Switch বাটন এখন সবসময় নিজস্ব top-level layer এ থাকে, video overlay এর ভেতরে না —
+ *     তাই gesture-layer কে নিচে পাঠালেও switch বাটন কখনো হারায় না, ফিরিয়ে আনা যায়।
+ *  2. Fullscreen আলাদা বাটন — Rotate থেকে আলাদা করা হয়েছে, যাতে শুধু fullscreen করা যায়
+ *     rotation ছাড়াই, এবং exit করাও যায় (toggle)।
+ *  3. Rotate এখন toggle: lock করলে "Unlock" দেখাবে, চাপলে orientation.unlock() কল হবে।
+ *  4. Boost (long-press 2x) state machine পুনর্লিখিত — pointer capture ব্যবহার করে,
+ *     এবং visibilitychange/blur এ ফোর্স-রিসেট হয়, তাই ব্যাকগ্রাউন্ডে ট্যাব গেলে বা
+ *     touch event miss হলেও boost আটকে থাকবে না।
  */
 (function () {
   'use strict';
 
-  // ঘন ঘন ব্যবহৃত DOM API-র ছোট alias — minify/encode সাইজ কমাতে
+  // ---------------- ছোট DOM helpers ----------------
   var DCE = function (tag) { return document.createElement(tag); };
-  var ON = function (el, ev, fn, opt) { el.addEventListener(ev, fn, opt); };
+  var ON = function (el, ev, fn, opt) { el.addEventListener(ev, fn, opt); return fn; };
   var APP = function (parent, child) { parent.appendChild(child); return child; };
   var NOPE = function (e) { e.preventDefault(); };
-  var ABS = 'position:absolute;'; // অধিকাংশ overlay element-এর common CSS prefix
+  var ABS = 'position:absolute;';
 
   var ATTR_FLAG = 'data-ve-enhanced';
   var BOTTOM_SAFE_ZONE = 0.16;
@@ -18,23 +28,25 @@
   var LONG_PRESS_MS = 350;
   var SEEK_SECONDS = 10;
   var BOOST_SPEED = 2;
-  var Z_TOP = 2147483000;   // overlay সাইটের উপরে
-  var Z_BOTTOM = -1;        // overlay সাইটের নিচে (pass-through mode)
 
-  // আসল টাচ ডিভাইস কিনা তা কেবল pointer:coarse দিয়ে ধরা হচ্ছে —
-  // viewport width বাদ দেওয়া হয়েছে, কারণ "Desktop site" মোডে viewport বড় দেখায়
-  // কিন্তু device তখনও touch-only থাকে। তাই আগের viewport-based চেক ভুল সিদ্ধান্ত দিত।
+  // z-index স্তরবিন্যাস (top থেকে নিচে):
+  //  CONTROL_Z  - বাটন-বার (rotate/fullscreen/fit/switch) — এটা কখনোই নিচে যায় না,
+  //               কারণ এটাই একমাত্র জিনিস যেটা দিয়ে ব্যবহারকারী ফিরে সুইচ করতে পারবে।
+  //  GESTURE_Z_ON / GESTURE_Z_OFF - tap/seek/boost layer, যেটা টগল হয়।
+  var CONTROL_Z = 2147483000;
+  var GESTURE_Z_ON = 2147482999;
+  var GESTURE_Z_OFF = -1;
+
   var IS_TOUCH = matchMedia('(pointer: coarse)').matches;
-  // সাইট নিজে desktop layout দেখাচ্ছে কিনা (touch থাকা সত্ত্বেও) — এটা আলাদা signal,
-  // যেটা দিয়ে বোঝা যায় ভিডিও প্লেয়ারের নিজস্ব UI ছোট/dense হতে পারে,
-  // তাই বাটন বড় + সবসময় visible রাখা দরকার touch হলে (hover নির্ভরযোগ্য না touch এ)
-  var IS_MOBILE_UI = IS_TOUCH;
 
-  // SVG বাদ দেওয়া হলো (encode হলে সাইজ অনেক বেড়ে যায়) — ছোট text label ব্যবহার হচ্ছে
-  var ICON_ROTATE = 'Rotate';
-  var ICON_FIT_ON = 'Fit';
-  var ICON_FIT_OFF = 'Unfit';
-  var ICON_SWITCH = 'Switch';
+  var LABEL_ROTATE = 'Rotate';
+  var LABEL_UNROTATE = 'Unrotate';
+  var LABEL_FULLSCREEN = 'Full';
+  var LABEL_EXIT_FULLSCREEN = 'Exit';
+  var LABEL_FIT_ON = 'Fit';
+  var LABEL_FIT_OFF = 'Unfit';
+  var LABEL_SWITCH_ON = 'Ctrl: Us';
+  var LABEL_SWITCH_OFF = 'Ctrl: Site';
 
   function init() {
     document.querySelectorAll('video').forEach(attachTo);
@@ -55,20 +67,21 @@
     video.setAttribute(ATTR_FLAG, '1');
 
     var container = ensureContainer(video);
-    var overlay = buildOverlay(video, container);
-    APP(container, overlay);
-    syncOverlaySize(video, overlay);
+    var rig = buildRig(video, container);
 
-    var ro = new ResizeObserver(function () { syncOverlaySize(video, overlay); });
+    syncRigSize(video, rig);
+
+    var ro = new ResizeObserver(function () { syncRigSize(video, rig); });
     ro.observe(video);
-    ON(window, 'resize', function () { syncOverlaySize(video, overlay); });
+    ON(window, 'resize', function () { syncRigSize(video, rig); });
     ON(document, 'fullscreenchange', function () {
-      setTimeout(function () { syncOverlaySize(video, overlay); }, 50);
+      setTimeout(function () { syncRigSize(video, rig); }, 50);
+      rig.onFullscreenChange();
     });
 
     var cleanupObserver = new MutationObserver(function () {
       if (!document.contains(video)) {
-        overlay.remove();
+        rig.destroy();
         ro.disconnect();
         cleanupObserver.disconnect();
       }
@@ -85,79 +98,141 @@
     return parent;
   }
 
-  function syncOverlaySize(video, overlay) {
-    var vRect = video.getBoundingClientRect();
-    var pRect = video.parentElement.getBoundingClientRect();
-    overlay.style.left = (vRect.left - pRect.left) + 'px';
-    overlay.style.top = (vRect.top - pRect.top) + 'px';
-    overlay.style.width = vRect.width + 'px';
-    overlay.style.height = vRect.height + 'px';
-  }
+  // rig = { gestureLayer, controlBar, destroy(), onFullscreenChange() }
+  // gestureLayer আর controlBar দুটো *আলাদা* sibling element, দুটোই container এর সরাসরি child —
+  // একটার z-index পাল্টালে অন্যটা প্রভাবিত হয় না। এটাই মূল আর্কিটেকচার-ফিক্স।
+  function buildRig(video, container) {
+    var state = { gestureActive: true };
 
-  function buildOverlay(video, container) {
-    var overlay = DCE('div');
-    overlay.style.cssText = ABS + 'pointer-events:none;z-index:' + Z_TOP + ';touch-action:manipulation;user-select:none;-webkit-user-select:none;';
-    overlay._active = true; // overlay বর্তমানে উপরে (সক্রিয়) আছে কিনা
-
+    // ---------- Gesture layer (tap/seek/boost) ----------
     var gestureLayer = DCE('div');
-    gestureLayer.style.cssText = ABS + 'left:0;top:0;width:100%;height:' + ((1 - BOTTOM_SAFE_ZONE) * 100) + '%;display:flex;pointer-events:auto;';
+    gestureLayer.style.cssText = ABS + 'left:0;top:0;width:100%;' +
+      'height:' + ((1 - BOTTOM_SAFE_ZONE) * 100) + '%;' +
+      'display:flex;pointer-events:auto;touch-action:manipulation;' +
+      'user-select:none;-webkit-user-select:none;z-index:' + GESTURE_Z_ON + ';';
 
     var leftZone = DCE('div');
     var rightZone = DCE('div');
     [leftZone, rightZone].forEach(function (z) {
-      z.style.cssText = 'flex:1;height:100%;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;';
+      z.style.cssText = 'flex:1;height:100%;-webkit-touch-callout:none;' +
+        '-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;';
     });
     APP(gestureLayer, leftZone);
     APP(gestureLayer, rightZone);
-    APP(overlay, gestureLayer);
+    APP(container, gestureLayer);
 
-    attachSeekAndBoost(video, leftZone, 'left');
-    attachSeekAndBoost(video, rightZone, 'right');
+    // boost/seek badge — gestureLayer এর ভেতরেই, কারণ এগুলো শুধু গেসচার সক্রিয় থাকলেই দরকার
+    var badgeHost = DCE('div');
+    badgeHost.style.cssText = ABS + 'left:0;top:0;width:100%;height:100%;pointer-events:none;';
+    APP(gestureLayer, badgeHost);
 
-    var btnBar = DCE('div');
-    btnBar.style.cssText = ABS + 'top:8px;right:8px;display:flex;gap:6px;pointer-events:auto;z-index:' + (Z_TOP + 1) + ';transition:opacity .15s ease;' + (IS_MOBILE_UI ? 'opacity:1;' : 'opacity:0;');
-
-    if (!IS_MOBILE_UI) {
-      ON(container, 'mouseenter', function () { btnBar.style.opacity = '1'; });
-      ON(container, 'mouseleave', function () { btnBar.style.opacity = '0'; });
-    }
-
-    var rotateBtn = makeButton(ICON_ROTATE, 'Rotate');
-    var fitBtn = makeButton(ICON_FIT_ON, 'Fit');
-    var switchBtn = makeButton(ICON_SWITCH, 'Switch');
-
-    APP(btnBar, switchBtn);
-    APP(btnBar, fitBtn);
-    APP(btnBar, rotateBtn);
-    APP(overlay, btnBar);
-
-    attachRotateLock(video, rotateBtn);
-    attachFitToggle(video, fitBtn);
-    attachLayerSwitch(overlay, gestureLayer, switchBtn, container);
-
-    // boost/seek badge দুটোই একই "dark bubble" স্টাইল শেয়ার করে
-    var BADGE = ABS + 'top:50%;background:#000a;color:#fff;font:600 13px/1 sans-serif;border-radius:16px;display:none;pointer-events:none;';
-
+    var BADGE_CSS = ABS + 'top:50%;background:#000a;color:#fff;font:600 13px/1 sans-serif;' +
+      'border-radius:16px;display:none;pointer-events:none;';
     var boostBadge = DCE('div');
     boostBadge.textContent = '2x';
-    boostBadge.style.cssText = BADGE + 'left:50%;transform:translate(-50%,-50%);padding:6px 12px;';
-    APP(overlay, boostBadge);
-    overlay._boostBadge = boostBadge;
+    boostBadge.style.cssText = BADGE_CSS + 'left:50%;transform:translate(-50%,-50%);padding:6px 12px;';
+    APP(badgeHost, boostBadge);
 
     var seekBadge = DCE('div');
-    seekBadge.style.cssText = BADGE + 'transform:translateY(-50%);padding:5px 10px;';
-    APP(overlay, seekBadge);
-    overlay._seekBadge = seekBadge;
+    seekBadge.style.cssText = BADGE_CSS + 'transform:translateY(-50%);padding:5px 10px;';
+    APP(badgeHost, seekBadge);
 
-    return overlay;
+    var boostCtl = attachSeekAndBoost(video, leftZone, 'left', boostBadge, seekBadge);
+    var boostCtl2 = attachSeekAndBoost(video, rightZone, 'right', boostBadge, seekBadge);
+
+    // ---------- Control bar (rotate / fullscreen / fit / switch) ----------
+    // এই বার সবসময় CONTROL_Z তে থাকে, gestureLayer এর z-index যাই হোক না কেন।
+    // ফলে "Ctrl: Site" মোডে গেলেও এই বার নিজে কখনো নিচে চাপা পড়ে না, ফিরে আসা যায়।
+    var controlBar = DCE('div');
+    controlBar.style.cssText = ABS + 'top:8px;right:8px;display:flex;gap:6px;' +
+      'pointer-events:none;z-index:' + CONTROL_Z + ';transition:opacity .15s ease;' +
+      (IS_TOUCH ? 'opacity:1;' : 'opacity:0;');
+    APP(container, controlBar);
+
+    if (!IS_TOUCH) {
+      ON(container, 'mouseenter', function () { controlBar.style.opacity = '1'; });
+      ON(container, 'mouseleave', function () { controlBar.style.opacity = '0'; });
+    }
+
+    var switchBtn = makeButton(LABEL_SWITCH_ON, 'Switch control between overlay and site');
+    var fitBtn = makeButton(LABEL_FIT_ON, 'Fit / Zoom video');
+    var fsBtn = makeButton(LABEL_FULLSCREEN, 'Fullscreen');
+    var rotateBtn = makeButton(LABEL_ROTATE, 'Rotate to landscape');
+
+    // প্রতিটা বাটনের নিজের pointer-events auto করতে হবে, কারণ controlBar-এর
+    // pointer-events none (যাতে বার-এর ফাঁকা জায়গা দিয়ে ক্লিক নিচে চলে যায়,
+    // কিন্তু বাটনগুলোর উপর ক্লিক ঠিকই কাজ করে)
+    [switchBtn, fitBtn, fsBtn, rotateBtn].forEach(function (b) {
+      b.style.pointerEvents = 'auto';
+    });
+
+    APP(controlBar, switchBtn);
+    APP(controlBar, fitBtn);
+    APP(controlBar, fsBtn);
+    APP(controlBar, rotateBtn);
+
+    attachFitToggle(video, fitBtn);
+    attachFullscreenToggle(video, container, fsBtn);
+    attachRotateToggle(rotateBtn);
+
+    function setGestureActive(active) {
+      state.gestureActive = active;
+      gestureLayer.style.pointerEvents = active ? 'auto' : 'none';
+      gestureLayer.style.zIndex = String(active ? GESTURE_Z_ON : GESTURE_Z_OFF);
+      switchBtn.textContent = active ? LABEL_SWITCH_ON : LABEL_SWITCH_OFF;
+      switchBtn.style.background = active ? '#0008' : '#fc0e';
+      switchBtn.style.color = active ? '#fff' : '#000';
+      // মোড পাল্টানোর সময় যেকোনো চলমান বুস্ট/প্রেস অবস্থা বাতিল করে দেওয়া হয়,
+      // নাহলে boost চলা অবস্থায় সুইচ করলে video আটকে 2x থেকে যেতে পারে
+      boostCtl.forceReset();
+      boostCtl2.forceReset();
+    }
+
+    ON(switchBtn, 'click', function (e) {
+      e.stopPropagation();
+      setGestureActive(!state.gestureActive);
+    });
+
+    // ট্যাব ব্যাকগ্রাউন্ডে গেলে বা উইন্ডো blur হলে যেকোনো চলমান long-press/boost বাতিল —
+    // এটাই মূলত "background এ অন্য কিছু চললে boost আটকে যাওয়া" বাগের ফিক্স
+    ON(document, 'visibilitychange', function () {
+      if (document.hidden) { boostCtl.forceReset(); boostCtl2.forceReset(); }
+    });
+    ON(window, 'blur', function () { boostCtl.forceReset(); boostCtl2.forceReset(); });
+
+    return {
+      gestureLayer: gestureLayer,
+      controlBar: controlBar,
+      onFullscreenChange: function () {
+        fsBtn.textContent = document.fullscreenElement ? LABEL_EXIT_FULLSCREEN : LABEL_FULLSCREEN;
+      },
+      destroy: function () {
+        gestureLayer.remove();
+        controlBar.remove();
+      }
+    };
+  }
+
+  function syncRigSize(video, rig) {
+    var vRect = video.getBoundingClientRect();
+    var pRect = video.parentElement.getBoundingClientRect();
+    var left = (vRect.left - pRect.left) + 'px';
+    var top = (vRect.top - pRect.top) + 'px';
+    var width = vRect.width + 'px';
+    var height = vRect.height + 'px';
+
+    rig.gestureLayer.style.left = left;
+    rig.gestureLayer.style.top = top;
+    rig.gestureLayer.style.width = width;
+    // gestureLayer এর height BOTTOM_SAFE_ZONE হিসেবে % এ সেট করা আছে বিল্ড টাইমে,
+    // কিন্তু সেটা container-relative %, তাই এখানে শুধু top/left/width বসালেই যথেষ্ট।
+    // control bar আলাদা, top:8px;right:8px এই সাপেক্ষে বসে, resize এ পুনরায় বসানোর দরকার নেই।
   }
 
   function makeButton(label, title) {
-    // touch device হলে সবসময় বড় বাটন/ফন্ট — viewport যাই হোক না কেন,
-    // কারণ desktop-mode এ থাকলেও আঙুল দিয়েই ট্যাপ করতে হবে
-    var fontSize = IS_MOBILE_UI ? 13 : 11;
-    var padY = IS_MOBILE_UI ? 8 : 5;
-    var padX = IS_MOBILE_UI ? 10 : 8;
+    var fontSize = IS_TOUCH ? 13 : 11;
+    var padY = IS_TOUCH ? 8 : 5;
+    var padX = IS_TOUCH ? 10 : 8;
     var b = DCE('button');
     b.type = 'button';
     b.textContent = label;
@@ -171,51 +246,55 @@
     return b;
   }
 
-  // ---------------- Feature: overlay <-> site UI layer switch ----------------
-  // overlay বাটন-বার সবসময় ক্লিকযোগ্য থাকে (z-index সবসময় top),
-  // কিন্তু gesture layer (video-র উপরের tap/seek/boost অংশ) টগল হয় —
-  // toggle off করলে pointer-events none + z-index নিচে নেমে যায়,
-  // তাই ট্যাপ সরাসরি নিচের সাইটের নিজস্ব play/pause/seekbar এ যাবে
-  function attachLayerSwitch(overlay, gestureLayer, btn, container) {
-    ON(btn, 'click', function (e) {
-      e.stopPropagation();
-      overlay._active = !overlay._active;
-      if (overlay._active) {
-        gestureLayer.style.pointerEvents = 'auto';
-        overlay.style.zIndex = String(Z_TOP);
-        btn.style.background = '#0008';
-        btn.style.color = '#fff';
-      } else {
-        gestureLayer.style.pointerEvents = 'none';
-        overlay.style.zIndex = String(Z_BOTTOM);
-        btn.style.background = '#fc0e';
-        btn.style.color = '#000';
-      }
-    });
-  }
-
-  function attachSeekAndBoost(video, zone, side) {
+  // ---------------- Feature: Long-press 2x speed + Double-tap seek ----------------
+  // ফিরে দেয় { forceReset() } যাতে বাইরে থেকে (visibilitychange/switch) স্টেট রিসেট করা যায়
+  function attachSeekAndBoost(video, zone, side, boostBadge, seekBadge) {
     var pressTimer = null;
     var isBoosting = false;
     var originalRate = 1;
     var lastTapTime = 0;
+    var activePointerId = null;
 
-    function startPress() {
-      pressTimer = setTimeout(function () {
-        originalRate = video.playbackRate;
-        video.playbackRate = BOOST_SPEED;
-        isBoosting = true;
-        toggleBoostBadge(zone, true);
-      }, LONG_PRESS_MS);
+    function clearPressTimer() {
+      if (pressTimer !== null) { clearTimeout(pressTimer); pressTimer = null; }
     }
 
-    function endPress(wasTap) {
-      clearTimeout(pressTimer);
+    function endBoost() {
       if (isBoosting) {
         video.playbackRate = originalRate;
         isBoosting = false;
-        toggleBoostBadge(zone, false);
-        return;
+        boostBadge.style.display = 'none';
+      }
+    }
+
+    // বাইরে থেকে callable: যেকোনো অবস্থায় সব টাইমার/বুস্ট বাতিল করে সম্পূর্ণ neutral করে
+    function forceReset() {
+      clearPressTimer();
+      endBoost();
+      activePointerId = null;
+      lastTapTime = 0;
+    }
+
+    function startPress(pointerId) {
+      activePointerId = pointerId;
+      clearPressTimer();
+      pressTimer = setTimeout(function () {
+        // পয়েন্টার আদৌ এখনো সক্রিয় কিনা যাচাই (মাঝে touchcancel/leave হয়ে থাকলে boost শুরু করা ঠিক না)
+        if (activePointerId !== pointerId) return;
+        originalRate = video.playbackRate;
+        video.playbackRate = BOOST_SPEED;
+        isBoosting = true;
+        boostBadge.style.display = 'block';
+      }, LONG_PRESS_MS);
+    }
+
+    function endPress(pointerId, wasTap) {
+      if (activePointerId !== pointerId) return; // অন্য পয়েন্টারের up ইভেন্ট, ignore
+      clearPressTimer();
+      activePointerId = null;
+      if (isBoosting) {
+        endBoost();
+        return; // long-press শেষে tap হিসেবে গণ্য হবে না
       }
       if (wasTap) handleTap();
     }
@@ -226,64 +305,104 @@
         lastTapTime = 0;
         var delta = side === 'left' ? -SEEK_SECONDS : SEEK_SECONDS;
         video.currentTime = Math.max(0, Math.min(video.duration || Infinity, video.currentTime + delta));
-        showSeekBadge(zone, side, delta);
+        showSeekBadge(delta);
       } else {
         lastTapTime = now;
       }
     }
 
+    function showSeekBadge(delta) {
+      seekBadge.textContent = (delta > 0 ? '+' : '') + delta + 's';
+      if (side === 'left') {
+        seekBadge.style.left = '12%';
+        seekBadge.style.right = '';
+      } else {
+        seekBadge.style.right = '12%';
+        seekBadge.style.left = '';
+      }
+      seekBadge.style.display = 'block';
+      clearTimeout(seekBadge._hideT);
+      seekBadge._hideT = setTimeout(function () { seekBadge.style.display = 'none'; }, 500);
+    }
+
     ON(zone, 'pointerdown', function (e) {
       e.preventDefault();
-      startPress();
+      // pointer capture নিশ্চিত করে যে এই zone-ই up/cancel পাবে,
+      // আঙুল সরে গেলেও (যেমন video-র বাইরে চলে গেলে) ইভেন্ট miss হবে না
+      if (zone.setPointerCapture) {
+        try { zone.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      }
+      startPress(e.pointerId);
     });
-    ON(zone, 'pointerup', function () { endPress(true); });
-    ON(zone, 'pointercancel', function () { endPress(false); });
-    ON(zone, 'pointerleave', function () { endPress(false); });
+    ON(zone, 'pointerup', function (e) { endPress(e.pointerId, true); });
+    ON(zone, 'pointercancel', function (e) { endPress(e.pointerId, false); });
+    // pointerleave আর ব্যবহার হচ্ছে না boost বন্ধ করতে (pointer capture থাকায় দরকার নেই);
+    // capture থাকলে pointerup/cancel নির্ভরযোগ্যভাবেই আসবে, তাই leave-based early-cancel সরানো হলো
+    // যেটা আগে "আঙুল সামান্য সরলেই boost বন্ধ হয়ে যাওয়া" সমস্যা করত।
 
     ON(zone, 'contextmenu', NOPE);
     ON(zone, 'selectstart', NOPE);
     ON(zone, 'dragstart', NOPE);
     ON(zone, 'touchstart', NOPE, { passive: false });
+
+    return { forceReset: forceReset };
   }
 
-  function toggleBoostBadge(zone, show) {
-    var overlay = zone.parentElement.parentElement;
-    var badge = overlay && overlay._boostBadge;
-    if (badge) badge.style.display = show ? 'block' : 'none';
-  }
-
-  function showSeekBadge(zone, side, delta) {
-    var overlay = zone.parentElement.parentElement;
-    var badge = overlay && overlay._seekBadge;
-    if (!badge) return;
-    badge.textContent = (delta > 0 ? '+' : '') + delta + 's';
-    if (side === 'left') {
-      badge.style.left = '12%';
-      badge.style.right = '';
-    } else {
-      badge.style.right = '12%';
-      badge.style.left = '';
-    }
-    badge.style.display = 'block';
-    clearTimeout(badge._hideT);
-    badge._hideT = setTimeout(function () { badge.style.display = 'none'; }, 500);
-  }
-
-  // ---------------- Feature: Landscape rotate lock ----------------
-  function attachRotateLock(video, btn) {
+  // ---------------- Feature: Fullscreen toggle (rotate থেকে আলাদা) ----------------
+  function attachFullscreenToggle(video, container, btn) {
     ON(btn, 'click', async function (e) {
       e.stopPropagation();
       try {
-        var el = video.parentElement;
-        if (!document.fullscreenElement) {
-          if (el.requestFullscreen) await el.requestFullscreen();
-          else if (video.requestFullscreen) await video.requestFullscreen();
-        }
-        if (screen.orientation && screen.orientation.lock) {
-          await screen.orientation.lock('landscape');
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else if (container.requestFullscreen) {
+          await container.requestFullscreen();
+        } else if (video.requestFullscreen) {
+          await video.requestFullscreen();
         }
       } catch (err) {
+        console.warn('[video-enhancer] fullscreen toggle failed:', err.message);
+      }
+      // btn.textContent আপডেট হয় fullscreenchange ইভেন্টে (rig.onFullscreenChange), এখানে না —
+      // কারণ ব্রাউজার নিজে থেকেও (Esc চাপলে) fullscreen ছাড়তে পারে, সেটাও ধরতে হবে
+    });
+  }
+
+  // ---------------- Feature: Landscape rotate — এখন সত্যিকারের toggle ----------------
+  function attachRotateToggle(btn) {
+    var isLocked = false;
+
+    ON(btn, 'click', async function (e) {
+      e.stopPropagation();
+      try {
+        if (isLocked) {
+          if (screen.orientation && screen.orientation.unlock) {
+            screen.orientation.unlock();
+          }
+          isLocked = false;
+          btn.textContent = LABEL_ROTATE;
+        } else {
+          if (screen.orientation && screen.orientation.lock) {
+            await screen.orientation.lock('landscape');
+          }
+          isLocked = true;
+          btn.textContent = LABEL_UNROTATE;
+        }
+      } catch (err) {
+        // কিছু ব্রাউজার fullscreen ছাড়া orientation lock allow করে না —
+        // ব্যর্থ হলে state আপডেট না করে silently থেমে যাওয়া হচ্ছে, যাতে
+        // বাটনের label বাস্তব অবস্থার সাথে মিথ্যা না বলে
         console.warn('[video-enhancer] rotate lock failed:', err.message);
+      }
+    });
+
+    // fullscreen থেকে বেরিয়ে গেলে orientation lock এমনিতেই ব্রাউজার রিলিজ করে দেয় —
+    // তাই label-ও সেই সাথে রিসেট করা দরকার, নাহলে বাটন "Unrotate" দেখাতেই থাকবে
+    // যদিও আসলে আর lock নেই
+    ON(document, 'fullscreenchange', function () {
+      if (!document.fullscreenElement && isLocked) {
+        isLocked = false;
+        btn.textContent = LABEL_ROTATE;
       }
     });
   }
@@ -308,7 +427,7 @@
         video.style.height = '100%';
         btn.style.background = '#fffd';
         btn.style.color = '#000';
-        btn.textContent = ICON_FIT_OFF;
+        btn.textContent = LABEL_FIT_OFF;
       } else {
         video.style.objectFit = savedStyle.objectFit || '';
         video.style.transform = savedStyle.transform || '';
@@ -316,7 +435,7 @@
         video.style.height = savedStyle.height || '';
         btn.style.background = '#0008';
         btn.style.color = '#fff';
-        btn.textContent = ICON_FIT_ON;
+        btn.textContent = LABEL_FIT_ON;
       }
     });
   }
