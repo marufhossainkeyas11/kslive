@@ -1,0 +1,151 @@
+/*!
+ * Video Enhancer - styles.css
+ * ============================================================================
+ * সব স্টাইল এখানে কেন্দ্রীভূত — main.js শুধু class যোগ/বাদ দেয়, ইনলাইন
+ * cssText ছড়িয়ে-ছিটিয়ে রাখে না। এতে দুটো মূল বাগ কাঠামোগতভাবে সমাধান হয়:
+ *
+ *  1. "YouTube-এর নিজস্ব control bar-এর সাথে ওভারল্যাপ" —
+ *     আগে আমাদের control bar শুধু semi-transparent ছিল, তাই নিচে সাইটের
+ *     নিজস্ব বাটন (settings gear, CC, play/pause) একই জায়গায় দৃশ্যমান থেকে
+ *     গিয়ে visual জঞ্জাল তৈরি করত। এখন Ctrl:Us (আমাদের কন্ট্রোল) সক্রিয়
+ *     থাকলে `.ve-scrim` নামের প্রায়-opaque একটা লেয়ার পুরো ভিডিও এলাকা ঢেকে
+ *     দেয় — এর ফলে নিচে সাইটের UI দেখাই যায় না, শুধু আমাদের bar-ই একমাত্র
+ *     visible/usable control থাকে। Ctrl:Site এ scrim সরে যায়, সাইটের UI
+ *     স্বাভাবিকভাবে দেখা ও ব্যবহার করা যায় (তখন control সম্পূর্ণ সাইটের)।
+ *
+ *  2. "Ctrl:Site বাটন পুরো স্ক্রিন জুড়ে হলুদ স্ট্রেচ হয়ে যাওয়া" —
+ *     এটা ছিল classic flexbox bug: `.ve-control-bar` এ `flex-wrap:wrap`
+ *     ছিল কিন্তু বাটনগুলোতে `flex: 0 0 auto` না থাকায়, viewport সংকুচিত
+ *     হলে flexbox বাটনকে available space পূরণ করতে stretch করে দিত। এখন
+ *     প্রতিটা `.ve-btn` এ explicit `flex: 0 0 auto` + `min-width` বসানো
+ *     আছে, তাই কোনো বাটন কখনো তার content-size এর বাইরে grow করবে না।
+ * ============================================================================
+ */
+
+/* ---------- Root layers ---------- */
+.ve-gesture-layer {
+  position: absolute;
+  left: 0; top: 0;
+  display: flex;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  z-index: 2147482999;
+}
+
+/* Ctrl:Us সক্রিয় থাকলে এই scrim ভিডিওর উপর বসে সাইটের নিজস্ব UI ঢেকে দেয় —
+   যাতে দুই সিস্টেমের বাটন কখনো একসাথে দৃশ্যমান/ব্যবহারযোগ্য না থাকে */
+.ve-scrim {
+  position: absolute;
+  left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 2147482998;
+  pointer-events: none; /* গঠনমূলকভাবে ইনপুট gesture-layer/control-bar নেয়, scrim শুধু visual */
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+.ve-scrim.ve-scrim--on { opacity: 1; }
+
+.ve-zone {
+  height: 100%;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.ve-zone--left  { flex: 0.42; }
+.ve-zone--center{ flex: 0.16; }
+.ve-zone--right { flex: 0.42; }
+
+.ve-badge-host {
+  position: absolute;
+  left: 0; top: 0; width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+/* ---------- Badges (2x / seek) ---------- */
+.ve-badge {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font: 600 13px/1 sans-serif;
+  border-radius: 16px;
+  display: none;
+  pointer-events: none;
+  padding: 6px 12px;
+  opacity: 0;
+  transition: transform .18s cubic-bezier(.34,1.56,.64,1), opacity .18s ease;
+}
+.ve-badge--boost {
+  top: 18%; left: 50%;
+  transform: translateX(-50%) scale(.85);
+}
+.ve-badge--boost.ve-badge--visible {
+  transform: translateX(-50%) scale(1);
+}
+.ve-badge--seek {
+  top: 50%;
+  font-size: 15px;
+  transform: translateY(-50%) scale(.85);
+}
+.ve-badge--seek-l { left: 12%; }
+.ve-badge--seek-r { right: 12%; }
+.ve-badge--seek.ve-badge--visible {
+  transform: translateY(-50%) scale(1);
+}
+.ve-badge--visible { opacity: 1; }
+
+/* ---------- Control bar ---------- */
+.ve-control-bar {
+  position: absolute;
+  top: 8px; right: 8px; left: 8px;
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 5px;
+  z-index: 2147483000;
+  transition: opacity .2s ease, transform .2s ease;
+  opacity: 1;
+  transform: translateY(0);
+  /* wrapper নিজে কখনো ইনপুট নেয় না — শুধু লেআউট স্পেসের জন্য; প্রতিটা বাটন
+     নিজে আলাদাভাবে pointer-events চালু/বন্ধ হয় (main.js এ) */
+  pointer-events: none;
+}
+.ve-control-bar--hidden {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.ve-btn {
+  /* BUGFIX: flex-wrap কন্টেইনারে explicit shrink/grow বন্ধ না রাখলে ছোট
+     viewport এ বাটন stretch হয়ে পুরো bar জুড়ে যেতে পারত — flex:0 0 auto
+     দিয়ে প্রতিটা বাটনকে তার নিজের content-size এ পিন করে রাখা হচ্ছে */
+  flex: 0 0 auto;
+  max-width: max-content;
+  border: none;
+  border-radius: 8px;
+  white-space: nowrap;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  backdrop-filter: blur(2px);
+  font: 600 13px/1 sans-serif;
+  padding: 7px 9px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,.4);
+  transition: transform .1s ease, background .15s ease, opacity .15s ease;
+  pointer-events: none; /* ডিফল্ট বন্ধ — main.js প্রয়োজনে auto করে */
+}
+.ve-btn--desktop {
+  font-size: 11px;
+  padding: 5px 7px;
+}
+.ve-btn:active { transform: scale(.92); }
+.ve-btn--disabled {
+  opacity: .4;
+  cursor: default;
+}
+.ve-btn--close { background: rgba(0, 0, 0, 0.4); }
+.ve-btn--switch-site {
+  background: #fc0e;
+  color: #000;
+}
