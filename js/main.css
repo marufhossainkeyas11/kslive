@@ -14,20 +14,19 @@
  *     কারণ shadow root এর বাইরের কোনো element এই <style> ব্লকের আওতায়
  *     পড়ে না।
  *
- * বাকি সব rule আগের মতোই — শুধু positioning এখন shadow host (`:host`)-এর
- * সাপেক্ষে, কারণ container আর সরাসরি parent থাকছে না; একটা host <div>
- * video-এর parent-এ বসছে এবং সব UI তার shadow root-এর ভেতরে।
+ * NOTE: host এর position:fixed/left/top/z-index এখন main.js এ ইনলাইনভাবে
+ * সেট হয় (single source of truth — video geometry dynamic, তাই static CSS
+ * দিয়ে সম্ভব না), তাই এখানে :host এ position/z-index rule ইচ্ছাকৃতভাবে
+ * নেই — দুই জায়গায় positioning duplicate/conflict করা এড়াতে।
  * ============================================================================
  */
 
 /* ---------- Shadow boundary reset ---------- */
 :host {
   all: initial;
-  position: absolute;
-  left: 0; top: 0;
-  z-index: 2147483000;
   /* host নিজে কোনো layout box রাখে না, ভেতরের absolute-positioned
-     child-রাই আসল সাইজ/অবস্থান বহন করে */
+     child-রাই আসল সাইজ/অবস্থান বহন করে। position/left/top/z-index এখানে
+     ইচ্ছাকৃতভাবে নেই — main.js ইনলাইনে সেট করে (উপরের NOTE দেখুন) */
   display: block;
   width: 0; height: 0;
   pointer-events: none;
