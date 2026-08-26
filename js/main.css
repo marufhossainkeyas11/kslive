@@ -18,6 +18,16 @@
  * সেট হয় (single source of truth — video geometry dynamic, তাই static CSS
  * দিয়ে সম্ভব না), তাই এখানে :host এ position/z-index rule ইচ্ছাকৃতভাবে
  * নেই — দুই জায়গায় positioning duplicate/conflict করা এড়াতে।
+ *
+ * NOTE: .ve-fullscreen-wrapper এবং তার ভেতরের <video> এই ফাইলে নেই —
+ * fullscreen fallback (main.js: attachFullscreenToggle) চলাকালীন সেই
+ * wrapper আর video আসল <video> element-কেই ধারণ করে (আমাদের rig-এর
+ * shadow root-এর ভেতরে না, light DOM-এই থাকে, কারণ Fullscreen API-কে
+ * wrapper-টাকেই fullscreen করাতে হয়) — তাই সেগুলোর স্টাইল main.js থেকে
+ * সরাসরি inline (element.style.*) হিসেবে সেট হয়, এই shadow-scoped
+ * stylesheet থেকে না। এই isolation boundary-র বাইরে কোনো light-DOM
+ * <style> ট্যাগ যোগ না করে ইচ্ছাকৃতভাবেই inline style ব্যবহার করা হয়েছে,
+ * যাতে পেইজের CSS-এর সাথে কোনো selector conflict/leak-এর সুযোগ না থাকে।
  * ============================================================================
  */
 
@@ -40,31 +50,6 @@
   line-height: 1;
   color: #fff;
   -webkit-font-smoothing: antialiased;
-}
-
-/* ---------- Fullscreen video slot ---------- */
-/* fullscreen চলাকালীন আসল <video> এখানে সাময়িকভাবে move হয়ে আসে
-   (main.js: attachFullscreenToggle) — কারণ Fullscreen API শুধু
-   requestFullscreen() করা element-এর subtree-ই top-layer এ রেন্ডার করে,
-   আর host এখন video-এর sibling (document.body-এর direct child), video
-   নিজে না আনলে fullscreen host খালি দেখাত। বাকি সময় (non-fullscreen)
-   এই div খালিই থাকে, কোনো layout প্রভাব ফেলে না। */
-.ve-video-slot {
-  position: absolute;
-  left: 0; top: 0; right: 0; bottom: 0;
-  z-index: -1; /* scrim/gestureLayer/controlBar এর পেছনে, video যেন
-                  কখনো নিজের controls/click target overlay-কে ঢেকে না
-                  ফেলে */
-}
-.ve-video-slot:empty {
-  display: none; /* non-fullscreen অবস্থায় slot এ কিছু নেই, ফাঁকা box
-                     হিসেবেও কোনো hit-testing/layout প্রভাব যেন না থাকে */
-}
-.ve-video-slot > video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  background: #000;
 }
 
 /* ---------- Root layers ---------- */
