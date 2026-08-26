@@ -127,6 +127,88 @@
     VOL: 'Vol+', CLOSE: '✕', PIP: 'PiP'
   };
 
+  // ---------------- সাইটের নিজস্ব fullscreen বাটন খোঁজা (best-effort) ----------------
+  // উদ্দেশ্য: আমরা video/rig-কে fullscreen করার চেষ্টা করার *আগে* সাইটের
+  // নিজস্ব fullscreen বাটন খুঁজে সেটাতেই click পাঠানো — কারণ সাইটের নিজস্ব
+  // fullscreen player-এ প্রায়ই subtitle/quality-selector/site-এর নিজস্ব UI
+  // ঠিকভাবে কাজ করে, যেটা আমাদের নিজস্ব video.requestFullscreen() একা
+  // করালে হারিয়ে যায়। সাইটের বাটন পাওয়া না গেলে বা click করেও আসলে
+  // fullscreen না হলে (ভুল বাটনে ক্লিক পড়া বা click ignored হওয়ার
+  // সম্ভাবনা আছে বলেই যাচাই করা হয়) আমরা নিজেদের fallback ব্যবহার করি
+  // (attachFullscreenToggle এর ownFullscreenFallback দেখুন)।
+  var FS_BTN_SELECTOR = [
+    '[aria-label*="fullscreen" i]',
+    '[aria-label*="full screen" i]',
+    '[title*="fullscreen" i]',
+    '[title*="full screen" i]',
+    '[class*="fullscreen" i]',
+    '[class*="full-screen" i]',
+    '[data-testid*="fullscreen" i]',
+    'button[class*="full" i][class*="screen" i]'
+  ].join(',');
+
+  function isVisible(el) {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    if (el.offsetParent === null && getComputedStyle(el).position !== 'fixed') return false;
+    var r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+
+  function textLooksLikeFullscreen(el) {
+    var t = (el.textContent || '').trim().toLowerCase();
+    return /full\s*screen/.test(t);
+  }
+
+  // video-এর চারপাশে (কয়েক ধাপ ancestor + সেই ancestor-দের descendant)
+  // খোঁজা হয় — পুরো document না, কারণ পুরো পেইজে "fullscreen" শব্দযুক্ত
+  // অপ্রাসঙ্গিক এলিমেন্টও থাকতে পারে (যেমন কোনো ভিন্ন widget-এর বাটন)।
+  // ownFsBtn প্যারামিটার দিয়ে আমাদের নিজের fsBtn বাদ দেওয়া হচ্ছে, কারণ
+  // সেটাও এই selector-এর সাথে ম্যাচ করতে পারে (শুধু 'title' attribute-এ
+  // "Fullscreen" শব্দ থাকায়) — কিন্তু সেটা shadow root-এর ভেতরে থাকায়
+  // querySelectorAll('*')-এ ধরাই পড়বে না (shadow boundary), তবু সততার
+  // খাতিরে explicit exclude রাখা হলো যদি ভবিষ্যতে structure পাল্টায়।
+  function findSiteFullscreenButton(video, ownFsBtn) {
+    var candidates = [];
+    var scopeRoots = [];
+    var node = video.parentElement;
+    var depth = 0;
+    while (node && depth < 6) {
+      scopeRoots.push(node);
+      node = node.parentElement;
+      depth += 1;
+    }
+    // document.body ও যোগ করা হচ্ছে যাতে player wrapper-এর বাইরে বসানো
+    // fullscreen বাটন (কিছু সাইটে থাকে) ধরা পড়ে — কিন্তু body থেকে সরাসরি
+    // querySelectorAll করলে পুরো পেইজ স্ক্যান হয়ে যায়, তাই body-কে শুধু
+    // অন্য কোনো scopeRoot না পাওয়া গেলে (video খুব অগভীর ancestry-তে
+    // থাকলে) fallback হিসেবে রাখা হচ্ছে, প্রাধান্য না দিয়ে।
+    if (scopeRoots.length === 0 && document.body) scopeRoots.push(document.body);
+
+    for (var i = 0; i < scopeRoots.length; i++) {
+      var found = scopeRoots[i].querySelectorAll(FS_BTN_SELECTOR);
+      for (var j = 0; j < found.length; j++) candidates.push(found[j]);
+    }
+    // ছোট ancestor scope-এ কিছু না পেলে, শেষ চেষ্টা হিসেবে বাটন/role=button
+    // element-দের টেক্সট চেক করা হয় ("Full Screen" লেখা বাটন, কোনো
+    // fullscreen-related attribute ছাড়াই)
+    if (candidates.length === 0) {
+      for (var k = 0; k < scopeRoots.length; k++) {
+        var buttons = scopeRoots[k].querySelectorAll('button, [role="button"]');
+        for (var m = 0; m < buttons.length; m++) {
+          if (textLooksLikeFullscreen(buttons[m])) candidates.push(buttons[m]);
+        }
+      }
+    }
+
+    for (var n = 0; n < candidates.length; n++) {
+      var el = candidates[n];
+      if (el === ownFsBtn) continue;
+      if (!isVisible(el)) continue;
+      return el;
+    }
+    return null;
+  }
+
   var STYLES_URL = 'https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/js/main.css';
   var CSS_TEXT = ''; // boot() এ fetch হয়ে বসে, প্রতিটা নতুন shadow root এই cached text ব্যবহার করে
 
@@ -297,15 +379,16 @@
   }
 
   function syncRigSize(video, shadowHost, rig) {
-    // fullscreen চলাকালীন video সাময়িকভাবে videoSlot-এর ভেতরে (shadow
-    // root-এর subtree-তে) থাকে (attachFullscreenToggle দেখুন) — তখন
-    // video.getBoundingClientRect() আর পেইজের original layout position
-    // প্রতিফলিত করে না, বরং fullscreen host-এর ভেতরের অবস্থান দেখায়।
-    // shadowHost তখন নিজেই fullscreen element এবং UA স্বয়ংক্রিয়ভাবে
-    // viewport পূরণ করে, তাই এই geometry sync পুরোপুরি স্কিপ করা হচ্ছে —
-    // নাহলে video-এর slot-এর ভেতরের rect দিয়ে shadowHost-কেই resize করার
-    // চেষ্টা হতো, যেটা ভুল এবং অপ্রয়োজনীয়।
-    if (document.fullscreenElement === shadowHost) return;
+    // পুরনো ডিজাইনে (v1) shadowHost নিজেই fullscreen element হতো এবং এই
+    // ফাংশনটা fullscreen-এ স্কিপ করা হতো। নতুন ডিজাইনে (v2) shadowHost
+    // কখনো নিজে fullscreen হয় না — হয় সাইট নিজেই fullscreen হয় (video
+    // এমনিই viewport পূরণ করে, rect ঠিকই পাওয়া যায়), অথবা আমাদের
+    // fullscreenWrapper fullscreen হয় (video তার ভেতরে width:100%/
+    // height:100% দিয়ে viewport পূরণ করে — CSS দেখুন .ve-fullscreen-
+    // wrapper > video)। দুই ক্ষেত্রেই video.getBoundingClientRect() ঠিক
+    // মান দেয়, তাই আলাদা কোনো fullscreen special-case আর দরকার নেই —
+    // এই sync সবসময় একইভাবে চলে, viewport-fitted video geometry-ই rig-কে
+    // সঠিক জায়গায় বসিয়ে দেয়।
 
     // position:fixed viewport-relative, তাই getBoundingClientRect() থেকে
     // সরাসরি left/top ব্যবহার করা যায় — কোনো parent offset বিয়োগ করার
@@ -363,20 +446,6 @@
   function buildRig(video, root, shadowHost) {
     var mode = { active: true };
     var uiState = { isFullscreen: false, controlsExpanded: true, autoHideTimer: null };
-
-    // fullscreen চাওয়া হয় shadowHost-এর উপর, video-এর উপর সরাসরি না (নিচে
-    // attachFullscreenToggle এর কমেন্ট দেখুন) — কারণ shadowHost video-এর
-    // sibling (document.body-এর direct child), descendant না। কিন্তু
-    // Fullscreen API শুধু requestFullscreen() করা element-এর subtree-কেই
-    // top-layer এ রেন্ডার করে — video নিজে shadowHost-এর subtree-তে না
-    // থাকলে fullscreen host খালি/কালো দেখাবে, video দেখা যাবে না। তাই
-    // fullscreen চলাকালীন video-কে DOM-এ সাময়িকভাবে এই videoSlot-এর ভেতরে
-    // সরিয়ে আনা হয় (attachFullscreenToggle এ), exit করলে ঠিক আগের
-    // parent/position এ ফেরত দেওয়া হয়। videoSlot বাকি সময় খালি থাকে —
-    // non-fullscreen অবস্থায় video-এর আসল DOM অবস্থান একদমই অপরিবর্তিত।
-    var videoSlot = DCE('div');
-    videoSlot.className = 've-video-slot';
-    APP(root, videoSlot);
 
     var scrim = DCE('div');
     scrim.className = 've-scrim';
@@ -436,9 +505,9 @@
     attachPlayPauseToggle(video, playBtn);
     var volCleanup = attachVolumeBoost(video, volBtn);
     attachFitToggle(video, fitBtn, function () { return uiState.isFullscreen; });
-    var fsCtl = attachFullscreenToggle(video, shadowHost, videoSlot, fsBtn);
+    var fsCtl = attachFullscreenToggle(video, shadowHost, fsBtn);
     attachPipToggle(video, pipBtn);
-    attachRotateToggle(rotateBtn);
+    attachRotateToggle(video, rotateBtn);
 
     function setDisabled(btn, disabled) {
       btn.disabled = disabled;
@@ -555,18 +624,23 @@
       onFullscreenChange: function () {
         // document.fullscreenElement সবসময় page-wide, এবং fullscreenchange
         // listener প্রতিটা rig আলাদাভাবে document-এ বসায় (attachTo দেখুন) —
-        // তাই কোনো ভিন্ন video/rig fullscreen হলেও এটা ফায়ার হয়। শুধু
-        // truthy চেক করলে একাধিক video থাকা পেইজে সব rig ভুলভাবে নিজেকে
-        // "fullscreen active" মনে করত। === shadowHost চেক দিয়ে এই rig-ই
-        // আসল fullscreen element কিনা সেটা নিশ্চিত করা হচ্ছে।
-        var iAmFullscreen = document.fullscreenElement === shadowHost;
+        // তাই কোনো ভিন্ন video/rig fullscreen হলেও এটা ফায়ার হয়। আগে
+        // === shadowHost চেক করা হতো, কিন্তু নতুন ডিজাইনে shadowHost
+        // কখনোই নিজে fullscreen element হয় না (হয় সাইটের নিজস্ব element,
+        // অথবা আমাদের fullscreenWrapper) — তাই সঠিক চেক হলো: এই rig-এর
+        // video কি fullscreenElement-এর subtree-এর ভেতরে? contains()
+        // দিয়ে এটা নির্ভরযোগ্যভাবে ধরা যায়, fullscreen element যেই-ই হোক।
+        var iAmFullscreen = !!(document.fullscreenElement &&
+          document.fullscreenElement.contains(video));
         uiState.isFullscreen = iAmFullscreen;
         fsBtn.textContent = iAmFullscreen ? L.EXIT_FULLSCREEN : L.FULLSCREEN;
         syncFullscreenGatedButtons();
         // fullscreen বন্ধ হয়ে গেলে (ESC, browser back, অন্য কোনোভাবে —
-        // শুধু আমাদের fsBtn ক্লিক না) video যেন সবসময় আগের DOM জায়গায়
-        // ফেরত যায়, তাই এখানেও restore কল করা — fsCtl.restoreIfMoved()
-        // ইতিমধ্যে restore হয়ে থাকলে কিছু করে না (idempotent)।
+        // শুধু আমাদের fsBtn ক্লিক না) video/shadowHost যেন সবসময় আগের DOM
+        // জায়গায় ফেরত যায় (আমাদের নিজস্ব fallback ব্যবহার করা হলে), তাই
+        // এখানেও restore কল করা — fsCtl.restoreIfMoved() ইতিমধ্যে restore
+        // হয়ে থাকলে (বা সাইটের বাটন দিয়ে fullscreen হয়ে থাকলে, যেখানে
+        // আমরা কিছুই move করিনি) কিছু করে না (idempotent/no-op)।
         if (!iAmFullscreen) fsCtl.restoreIfMoved();
       },
       destroy: function () {
@@ -577,10 +651,16 @@
         removeFromRegistry();
         OFF(document, 'visibilitychange', onVisChange);
         OFF(window, 'blur', onBlur);
-        // shadowHost.remove() এর আগে video ফেরত পাঠাতে হবে যদি সেটা এখন
-        // videoSlot-এর ভেতরে থাকে (fullscreen চলাকালীন destroy হলে) —
-        // নাহলে shadowHost.remove() video-সহ পুরো subtree DOM থেকে সরিয়ে
-        // দেবে, video পেইজ থেকেই হারিয়ে যাবে।
+        // fullscreen fallback চলাকালীন destroy হলে video/shadowHost এখনও
+        // fullscreenWrapper-এর ভেতরে থাকতে পারে — shadowHost.remove() এর
+        // আগে fsCtl.restoreIfMoved() কল করে video/shadowHost ঠিক আগের
+        // DOM জায়গায় ফেরত পাঠানো হচ্ছে (নাহলে video-ও shadowHost-এর
+        // subtree ভুল করে সরে যেত)। এটা fullscreenWrapper-কেও DOM থেকে
+        // সরিয়ে দেয়, যা fullscreen element রিমুভ হওয়ার কারণে ব্রাউজার
+        // স্বয়ংক্রিয়ভাবেই fullscreen বন্ধ করে দেয় (spec অনুযায়ী)। সাইটের
+        // নিজস্ব বাটন দিয়ে fullscreen হয়ে থাকলে (আমরা কিছুই move করিনি)
+        // restoreIfMoved() no-op — সাইটের fullscreen অক্ষতই থাকে, যা
+        // ঠিক আছে কারণ সেটা আমাদের rig destroy হওয়ার সাথে সম্পর্কহীন।
         fsCtl.restoreIfMoved();
         // shadowHost.remove() পুরো shadow subtree (gestureLayer, scrim,
         // controlBar, badges, <style>) একবারেই সরিয়ে দেয়
@@ -811,69 +891,184 @@
     };
   }
 
-  // ফিরে দেওয়া অবজেক্টের isMine()/restoreIfMoved() rig-এর নিজস্ব
-  // fullscreenchange হ্যান্ডলারে কল হয় (buildRig-এ), যাতে ESC/browser
-  // back/অন্য কোনো rig-এর fullscreen change — কোনো কারণেই video আটকে না
-  // থাকে বা ভুল rig এটা restore করার চেষ্টা না করে।
-  function attachFullscreenToggle(video, shadowHost, videoSlot, btn) {
+  // নতুন ডিজাইন (v2) — আগের সংস্করণে shadowHost-কে (একটা প্লেইন body-level
+  // div, নিজস্ব কোনো visual content ছাড়া) সরাসরি fullscreen করানো হতো,
+  // যার ফলে পুরো পেইজ কালো হয়ে যেত (fullscreen backdrop) এবং তার ভেতরে
+  // ছোট video/rig ভাসতে থাকত — user report করেছেন এটা "সাইট fullscreen"
+  // এর মতো আচরণ করছিল, "video fullscreen" এর মতো না।
+  //
+  // নতুন পদ্ধতি, অগ্রাধিকার অনুযায়ী:
+  //   ১. সাইটের নিজস্ব fullscreen বাটন খোঁজা (findSiteFullscreenButton) —
+  //      পেলে সেটাতেই click পাঠানো হয়, আমাদের নিজস্ব Fullscreen API একদম
+  //      ব্যবহারই করা হয় না। সাইট নিজে যেভাবে video/player fullscreen
+  //      করে সেটাই হয় — আমাদের rig তখনও body-level shadowHost হিসেবে
+  //      position:fixed + video-এর getBoundingClientRect() অনুসরণ করেই
+  //      থাকে (syncRigSize, যেটা resize/scroll/fullscreenchange-এ এমনিতেই
+  //      চলে) — সাইটের fullscreen video যেহেতু viewport পূরণ করে
+  //      (video-এর CSS width/height সাইট নিজেই 100% করে দেয় fullscreen
+  //      মোডে, প্রায় সব প্রোডাকশন প্লেয়ারেই এটাই স্বাভাবিক), rig
+  //      স্বয়ংক্রিয়ভাবেই সঠিক viewport-sized overlay হয়ে যায় — কোনো
+  //      নতুন কোড লাগে না, existing geometry-sync mechanism-ই যথেষ্ট।
+  //   ২. সাইটের বাটন না পাওয়া গেলে (বা ক্লিক করেও আসলে fullscreen না
+  //      হলে — POLL_MS পরে যাচাই করা হয়), fallback: আমাদের নিজস্ব
+  //      fullscreenWrapper তৈরি করে video + shadowHost দুটোকেই তার ভেতরে
+  //      সাময়িকভাবে নিয়ে আসা হয়, তারপর সেই wrapper-কেই fullscreen করা
+  //      হয় (video বা shadowHost এককভাবে না) — এতে video ও rig একই
+  //      fullscreen subtree-তে sibling হিসেবে থাকে, rig shadow root-এর
+  //      ভেতরের absolute-positioned layer গুলো video-এর ঠিক ওপরে
+  //      z-index দিয়ে বসে যায় (ঠিক normal mode-এ যেভাবে বসে)।
+  function attachFullscreenToggle(video, shadowHost, btn) {
     if (!SUPPORTS_FULLSCREEN) {
-      return { isMine: function () { return false; }, restoreIfMoved: function () {} };
+      return { restoreIfMoved: function () {} };
     }
 
-    // video আসল DOM-এ যেখানে ছিল, ঠিক সেই জায়গায় ফেরত দিতে হবে — শুধু
-    // parentNode জানলেই যথেষ্ট না (parent-এ একাধিক sibling থাকতে পারে),
-    // তাই nextSibling ও রাখা হচ্ছে যাতে insertBefore দিয়ে ঠিক আগের স্থানে
-    // বসানো যায়।
-    var originalParent = null;
-    var originalNextSibling = null;
-    var moved = false;
+    var SITE_BTN_VERIFY_MS = 400; // সাইটের বাটনে click করার পর আসলেই
+    // fullscreenElement সেট হলো কিনা যাচাই করতে এতটুকু সময় দেওয়া হয়
+    // (কিছু সাইট animation/transition এর পরে fullscreen কল করে)
 
-    function moveIntoSlot() {
-      if (moved) return;
-      originalParent = video.parentNode;
-      originalNextSibling = video.nextSibling;
-      videoSlot.appendChild(video);
-      moved = true;
+    // --- fallback wrapper state ---
+    var fullscreenWrapper = null;
+    var videoOriginalParent = null, videoOriginalNextSibling = null;
+    var hostOriginalParent = null, hostOriginalNextSibling = null;
+    var hostOriginalPosition = '';
+    var usingOwnFallback = false;
+
+    function buildWrapper() {
+      var w = DCE('div');
+      w.className = 've-fullscreen-wrapper';
+      // পুরোপুরি inline styles — কোনো light-DOM <style> ট্যাগ যোগ করা
+      // হচ্ছে না (উপরের styles.css এর NOTE দেখুন), যাতে পেইজের CSS-এর
+      // সাথে selector conflict/leak-এর কোনো সুযোগ না থাকে।
+      w.style.position = 'fixed';
+      w.style.left = '0'; w.style.top = '0';
+      w.style.width = '100%'; w.style.height = '100%';
+      w.style.margin = '0'; w.style.padding = '0'; w.style.border = '0';
+      w.style.background = '#000';
+      w.style.zIndex = '2147483647';
+      return w;
     }
 
-    function restoreIfMoved() {
-      if (!moved) return;
-      if (originalParent) {
-        originalParent.insertBefore(video, originalNextSibling);
+    // fullscreen fallback চলাকালীন video-এর নিজস্ব ইনলাইন width/height/
+    // objectFit temporarily 100%/100%/contain করে দেওয়া হয় (wrapper পূরণ
+    // করতে) — exit করলে video-এর আসল ইনলাইন স্টাইল (যা কিছুই থাকুক,
+    // এমনকি খালি স্ট্রিং হলেও) হুবহু ফেরত দেওয়া হয়, যাতে সাইটের নিজস্ব
+    // layout-এ কোনো স্থায়ী পরিবর্তন না থেকে যায়।
+    var videoOriginalInlineStyle = null;
+
+    function enterOwnFallback() {
+      if (usingOwnFallback) return;
+      fullscreenWrapper = buildWrapper();
+
+      videoOriginalParent = video.parentNode;
+      videoOriginalNextSibling = video.nextSibling;
+      hostOriginalParent = shadowHost.parentNode;
+      hostOriginalNextSibling = shadowHost.nextSibling;
+      hostOriginalPosition = shadowHost.style.position;
+      videoOriginalInlineStyle = video.getAttribute('style');
+
+      APP(document.body, fullscreenWrapper);
+      fullscreenWrapper.appendChild(video);
+      video.style.width = '100%';
+      video.style.height = '100%';
+      video.style.objectFit = 'contain';
+      video.style.background = '#000';
+
+      // fullscreenWrapper নিজেই viewport পূরণ করবে, তাই shadowHost-এর
+      // position:fixed আর দরকার নেই/ঠিক না — wrapper-এর ভেতরে absolute
+      // করে দেওয়া হচ্ছে (wrapper নিজে position:fixed, তাই absolute child
+      // তার সাপেক্ষে ঠিক viewport কোঅর্ডিনেটেই বসবে — syncRigSize এর
+      // viewport-relative left/top হিসাব অপরিবর্তিত থাকে)। z-index আগের
+      // মতোই max রাখা হচ্ছে যাতে video-এর ওপরেই থাকে।
+      shadowHost.style.position = 'absolute';
+      fullscreenWrapper.appendChild(shadowHost);
+
+      usingOwnFallback = true;
+    }
+
+    function exitOwnFallback() {
+      if (!usingOwnFallback) return;
+      if (videoOriginalInlineStyle === null) {
+        video.removeAttribute('style');
+      } else {
+        video.setAttribute('style', videoOriginalInlineStyle);
       }
-      moved = false;
-      originalParent = null;
-      originalNextSibling = null;
+      if (videoOriginalParent) {
+        videoOriginalParent.insertBefore(video, videoOriginalNextSibling);
+      }
+      shadowHost.style.position = hostOriginalPosition;
+      if (hostOriginalParent) {
+        hostOriginalParent.insertBefore(shadowHost, hostOriginalNextSibling);
+      }
+      if (fullscreenWrapper && fullscreenWrapper.parentNode) {
+        fullscreenWrapper.parentNode.removeChild(fullscreenWrapper);
+      }
+      fullscreenWrapper = null;
+      videoOriginalParent = null; videoOriginalNextSibling = null;
+      hostOriginalParent = null; hostOriginalNextSibling = null;
+      videoOriginalInlineStyle = null;
+      usingOwnFallback = false;
     }
+
+    function delay(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
 
     ON(btn, 'click', async function (e) {
       e.stopPropagation();
-      try {
-        if (document.fullscreenElement === shadowHost) {
-          await document.exitFullscreen();
-          // exitFullscreen() রিজলভ হলেই 'fullscreenchange' ফায়ার হবে,
-          // কিন্তু restore এখানেও আগেভাগে কল করা নিরাপদ (moved flag
-          // দিয়ে idempotent) — ধীরগতির fullscreenchange dispatch-এর
-          // জন্য অপেক্ষা না করেই video যেন দ্রুত পুরনো জায়গায় ফেরে।
-          restoreIfMoved();
-        } else if (shadowHost.requestFullscreen) {
-          // video-কে shadowHost-এর subtree-তে না আনলে fullscreen host
-          // খালি দেখাবে (উপরে videoSlot তৈরির কমেন্ট দেখুন) — তাই আগে
-          // move, তারপরেই requestFullscreen। কোনো কারণে requestFullscreen
-          // reject হলে (catch ব্লকে) video সাথে সাথেই ফেরত পাঠানো হয়,
-          // যাতে fullscreen ছাড়াই video হারিয়ে/লুকিয়ে না থাকে।
-          moveIntoSlot();
-          await shadowHost.requestFullscreen();
+
+      // এক্সিট পথ: হয় সাইটের fullscreen (আমরা shadowHost/wrapper কিছুই
+      // fullscreen করিনি, শুধু সাইটের বাটনে click পাঠিয়েছিলাম), অথবা
+      // আমাদের নিজস্ব fallback fullscreen — দুটোর জন্যই
+      // document.exitFullscreen() ঠিকই কাজ করে (যে element-ই fullscreen
+      // থাকুক না কেন, exitFullscreen() সেটা বন্ধ করে)। কিন্তু আগে যাচাই
+      // করতে হবে যে fullscreen থাকা element আসলে *এই* video-কেই ধারণ করে
+      // — পেইজে একাধিক video/rig থাকলে অন্য কোনো video fullscreen থাকা
+      // অবস্থায় এই বাটনে ক্লিক করলে যেন ভুলবশত সেই ভিন্ন fullscreen বন্ধ
+      // করে না দেয়।
+      var currentlyFullscreenForThisVideo = !!(document.fullscreenElement &&
+        document.fullscreenElement.contains(video));
+
+      if (currentlyFullscreenForThisVideo) {
+        try { await document.exitFullscreen(); } catch (err) {
+          console.warn('[video-enhancer] exitFullscreen failed:', err.message);
         }
+        exitOwnFallback();
+        return;
+      }
+
+      // এই video-এর জন্য fullscreen সক্রিয় না, কিন্তু document.fullscreenElement
+      // truthy হতে পারে (অন্য কোনো video/element fullscreen) — সেক্ষেত্রে
+      // নতুন fullscreen request করার আগে ব্রাউজার প্রথমটা exit করানো লাগতে
+      // পারে না (আধুনিক ব্রাউজারে একাধিক নেস্টেড fullscreen request সাধারণত
+      // reject হয়), তাই সরাসরি নতুন request পাঠানো হচ্ছে — ব্যর্থ হলে catch
+      // ব্লকেই ধরা পড়বে, ইউজারকে ভুল অবস্থায় ফেলবে না।
+
+      // এন্ট্রি পথ ১: সাইটের নিজস্ব fullscreen বাটন
+      var siteBtn = findSiteFullscreenButton(video, btn);
+      if (siteBtn) {
+        try {
+          siteBtn.click();
+          await delay(SITE_BTN_VERIFY_MS);
+          if (document.fullscreenElement && document.fullscreenElement.contains(video)) return; // সফল
+        } catch (err) {
+          console.warn('[video-enhancer] site fullscreen button click failed:', err.message);
+        }
+        // সাইটের বাটন থাকলেও কাজ করেনি — নিচে fallback এ চলে যাওয়া হচ্ছে
+      }
+
+      // এন্ট্রি পথ ২: আমাদের নিজস্ব fallback — video + rig একসাথে একটা
+      // wrapper-এ এনে সেই wrapper-কে fullscreen করা হয়, যাতে rig video-এর
+      // ওপরে overlay থাকে (শুধু video একা fullscreen করলে rig subtree-এর
+      // বাইরে পড়ে যেত, আগের বাগ)।
+      try {
+        enterOwnFallback();
+        await fullscreenWrapper.requestFullscreen();
       } catch (err) {
-        console.warn('[video-enhancer] fullscreen toggle failed:', err.message);
-        restoreIfMoved();
+        console.warn('[video-enhancer] fullscreen fallback failed:', err.message);
+        exitOwnFallback();
       }
     });
 
     return {
-      isMine: function () { return moved; },
-      restoreIfMoved: restoreIfMoved
+      restoreIfMoved: exitOwnFallback
     };
   }
 
@@ -892,7 +1087,7 @@
     ON(video, 'leavepictureinpicture', function () { btn.textContent = L.PIP; });
   }
 
-  function attachRotateToggle(btn) {
+  function attachRotateToggle(video, btn) {
     if (!SUPPORTS_ORIENTATION_LOCK) return;
     var isLocked = false;
     ON(btn, 'click', async function (e) {
@@ -910,7 +1105,13 @@
       }
     });
     ON(document, 'fullscreenchange', function () {
-      if (!document.fullscreenElement && isLocked) { isLocked = false; btn.textContent = L.ROTATE; }
+      // শুধু global fullscreenElement truthy চেক করলে ভিন্ন কোনো video/rig
+      // fullscreen exit করলেও এই rig নিজের rotate-lock ভুলভাবে রিসেট করে
+      // ফেলত (একাধিক video থাকা পেইজে) — video.contains() দিয়ে নিশ্চিত
+      // করা হচ্ছে এই rig-এরই fullscreen exit হয়েছে কিনা।
+      var stillFullscreenForThisVideo = !!(document.fullscreenElement &&
+        document.fullscreenElement.contains(video));
+      if (!stillFullscreenForThisVideo && isLocked) { isLocked = false; btn.textContent = L.ROTATE; }
     });
   }
 
@@ -935,7 +1136,12 @@
       }
     });
     ON(document, 'fullscreenchange', function () {
-      if (!document.fullscreenElement && isFit) {
+      // একই কারণে (উপরে attachRotateToggle দেখুন) video.contains() চেক —
+      // ভিন্ন কোনো video fullscreen exit করলে এই rig-এর fit state যেন
+      // ভুলভাবে রিসেট না হয়।
+      var stillFullscreenForThisVideo = !!(document.fullscreenElement &&
+        document.fullscreenElement.contains(video));
+      if (!stillFullscreenForThisVideo && isFit) {
         video.style.objectFit = savedStyle ? (savedStyle.objectFit || '') : '';
         video.style.transform = savedStyle ? (savedStyle.transform || '') : '';
         video.style.width = savedStyle ? (savedStyle.width || '') : '';
