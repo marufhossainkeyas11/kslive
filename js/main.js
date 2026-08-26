@@ -1,30 +1,39 @@
 /*!
  * Video Enhancer - main.js
  * ============================================================================
- * এই সংস্করণে দুটো নতুন কাঠামোগত ফিক্স যোগ হয়েছে (ছবিতে দেখা দুটো বাগের
- * প্রতিক্রিয়ায়):
+ * এই সংস্করণে নতুন কাঠামোগত ফিক্স যোগ হয়েছে: SHADOW DOM ISOLATION।
  *
- *  (E) STYLE EXTRACTION — সব CSS এখন styles.css থেকে আসে (একটা <style> ট্যাগ
- *      হিসেবে ইনজেক্ট হয়, Trusted-Types-aware, নিচে দেখুন injectStyles())।
- *      main.js শুধু className যোগ/বাদ দেয়, কোথাও ইনলাইন cssText নেই। এতে
- *      "flex-wrap কন্টেইনারে বাটন stretch হয়ে পুরো স্ক্রিন জুড়ে যাওয়া" বাগটা
- *      কাঠামোগতভাবে বন্ধ হয়ে গেছে — কারণ .ve-btn এ centrally flex:0 0 auto
- *      বসানো, main.js এ কোথাও আলাদা করে width/flex সেট করার সুযোগ নেই।
+ *  (G) CLOSED SHADOW ROOT — আগে সব UI element (gesture layer, scrim,
+ *      control bar, badges) সরাসরি video-এর parent (light DOM)-এ বসত।
+ *      এর ফলে হোস্ট পেইজের কোনো global CSS rule (যেমন `* { all: unset
+ *      !important }` টাইপ কিছু, বা কোনো অতি-agressive reset/override)
+ *      সরাসরি এসে আমাদের style ভেঙে দিতে পারত — এবং উল্টোদিকে, পেইজের
+ *      JS `document.querySelector('.ve-btn')` দিয়ে আমাদের DOM ধরে
+ *      manipulate করতে পারত।
  *
- *  (F) OPAQUE SCRIM FOR CONTROL OWNERSHIP — Ctrl:Us সক্রিয় থাকলে ভিডিওর
- *      উপর একটা প্রায়-opaque scrim বসে যায় যেটা সাইটের নিজস্ব
- *      controls/overlay সম্পূর্ণ ঢেকে দেয়। এতে "আমাদের bar আর YouTube-এর
- *      বাটন একই জায়গায় ভিজ্যুয়ালি মিশে যাওয়া" সমস্যাটা সব সাইটেই
- *      ইউনিভার্সালি সমাধান হয় — সাইট-স্পেসিফিক positioning hack ছাড়াই।
- *      দর্শন: "হয় কন্ট্রোল আমাদের (এবং তখন শুধু আমাদের UI-ই visible), নয়তো
- *      আমাদের অনুমতিতে সাইটের (scrim সরে যায়, সাইটের UI পুরোপুরি normal)"।
- *      Ctrl:Site এ scrim অদৃশ্য হয়ে যায়, gesture layer transparent-to-input
- *      হয়ে যায় — তখন ভিডিওটা সম্পূর্ণভাবে সাইটের নিজস্ব প্লেয়ারের।
+ *      এখন প্রতিটা video-এর জন্য একটা host <div> (id="ve-host-N") তৈরি
+ *      হয় video-এর parent-এ, এবং তার উপর `attachShadow({ mode: 'closed' })`
+ *      কল হয়। রিগের সব element (gestureLayer/scrim/controlBar/badges)
+ *      এবং CSS <style> ট্যাগ — সবকিছু এই shadow root এর ভেতরে বসে।
  *
- * বাকি নীতি আগের সংস্করণ থেকেই বজায়:
+ *      ফলাফল:
+ *        - CSS cascade shadow boundary পার হয় না, তাই পেইজের কোনো rule
+ *          (নির্দিষ্ট selector হোক বা `all: unset` টাইপ ইউনিভার্সাল হোক)
+ *          shadow root-এর ভেতরের element স্পর্শ করতে পারে না। styles.css
+ *          এর `:host { all: initial; ... }` এই boundary-কে আরও pin করে।
+ *        - mode:'closed' হওয়ায় `hostEl.shadowRoot` বাইরে থেকে সবসময়
+ *          `null` — পেইজের কোনো script (ownProperty রেফারেন্স না থাকলে)
+ *          shadow root-এর ভেতরে querySelector/manipulate করতে পারবে না।
+ *          rig-এর ভেতরেই একমাত্র closure-scoped রেফারেন্স রাখা হয়।
+ *        - প্রতিটা rig-এর নিজস্ব শেডো রুট, তাই একাধিক ভিডিওতে id/class
+ *          collision এর কোনো ঝুঁকি নেই, প্রতিটাই সম্পূর্ণ স্বতন্ত্র।
+ *
+ *  আগের সংস্করণ থেকে বজায় থাকা নীতিগুলো:
  *  (A) single-source-of-truth mode switching, (B) playbackRate ownership
  *  lock, (C) honest UI for impossible ops (Volume Boost hides on failure),
- *  (D) generation-counter state machines for badges.
+ *  (D) generation-counter state machines for badges, (E) style extraction
+ *  (main.js শুধু className টগল করে, ইনলাইন cssText নেই), (F) opaque scrim
+ *  for control ownership।
  * ============================================================================
  */
 (function () {
@@ -40,8 +49,9 @@
   function teardownAll() {
     VE.instances.forEach(function (inst) { inst.destroy(); });
     VE.instances = [];
-    var styleEl = document.getElementById('ve-styles');
-    if (styleEl) styleEl.remove();
+    // shadow root-এর ভেতরের <style> প্রতিটা rig destroy() এর সাথেই সরে
+    // যায় (host সহ পুরো subtree remove হয়), তাই এখানে আলাদা করে
+    // document-level style cleanup এর দরকার নেই।
   }
 
   // ---------------- ছোট DOM/util helpers ----------------
@@ -60,6 +70,7 @@
   };
 
   var ATTR_FLAG = 'data-ve-enhanced';
+  var hostCounter = 0;
 
   var CFG = {
     BOTTOM_SAFE_ZONE: 0.16,
@@ -80,6 +91,7 @@
   var SUPPORTS_FULLSCREEN = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled || document.documentElement.requestFullscreen);
   var SUPPORTS_ORIENTATION_LOCK = !!(window.screen && screen.orientation && screen.orientation.lock);
   var SUPPORTS_PIP = !!(document.pictureInPictureEnabled);
+  var SUPPORTS_SHADOW = !!(HTMLElement.prototype.attachShadow);
 
   var L = {
     ROTATE: 'Rotate', UNROTATE: 'Unrotate',
@@ -91,30 +103,9 @@
   };
 
   var STYLES_URL = 'https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/js/main.css';
+  var CSS_TEXT = ''; // boot() এ fetch হয়ে বসে, প্রতিটা নতুন shadow root এই cached text ব্যবহার করে
 
-  function injectStyles(cssText) {
-    if (document.getElementById('ve-styles')) return;
-    var styleEl = DCE('style');
-    styleEl.id = 've-styles';
-    try {
-      if (window.trustedTypes && trustedTypes.createPolicy) {
-        var policyName = 've-style-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
-        var policy = trustedTypes.createPolicy(policyName, {
-          createHTML: function (input) { return input; }
-        });
-        styleEl.textContent = cssText;
-      } else {
-        styleEl.textContent = cssText;
-      }
-    } catch (err) {
-      console.warn('[video-enhancer] style injection via policy failed, using direct assignment:', err.message);
-      styleEl.textContent = cssText;
-    }
-    document.documentElement.appendChild(styleEl);
-  }
-
-  function init(cssText) {
-    injectStyles(cssText);
+  function init() {
     document.querySelectorAll('video').forEach(attachTo);
     var mo = new MutationObserver(function (mutations) {
       mutations.forEach(function (m) {
@@ -131,19 +122,28 @@
 
   function attachTo(video) {
     if (!video || video.hasAttribute(ATTR_FLAG)) return;
+    if (!SUPPORTS_SHADOW) {
+      console.warn('[video-enhancer] Shadow DOM unsupported in this environment, skipping isolation-dependent UI.');
+      return;
+    }
     video.setAttribute(ATTR_FLAG, '1');
 
-    var container = ensureContainer(video);
-    var rig = buildRig(video, container);
+    var parent = ensureRelativeParent(video);
+    var shadowHost = createShadowHost(parent);
+    var root = shadowHost.attachShadow({ mode: 'closed' });
+
+    injectStyles(root);
+
+    var rig = buildRig(video, root, shadowHost);
     VE.instances.push(rig);
 
-    syncRigSize(video, rig);
+    syncRigSize(video, shadowHost, rig);
 
-    var ro = new ResizeObserver(function () { syncRigSize(video, rig); });
+    var ro = new ResizeObserver(function () { syncRigSize(video, shadowHost, rig); });
     ro.observe(video);
-    var onWinResize = ON(window, 'resize', function () { syncRigSize(video, rig); });
+    var onWinResize = ON(window, 'resize', function () { syncRigSize(video, shadowHost, rig); });
     var onFsChange = ON(document, 'fullscreenchange', function () {
-      setTimeout(function () { syncRigSize(video, rig); }, 50);
+      setTimeout(function () { syncRigSize(video, shadowHost, rig); }, 50);
       rig.onFullscreenChange();
     });
 
@@ -166,14 +166,35 @@
     };
   }
 
-  function ensureContainer(video) {
+  function ensureRelativeParent(video) {
     var parent = video.parentElement;
     var style = getComputedStyle(parent);
     if (style.position === 'static') parent.style.position = 'relative';
     return parent;
   }
 
-  function syncRigSize(video, rig) {
+  // host নিজে সাধারণ light-DOM element (তাই layout/position স্বাভাবিকভাবে
+  // কাজ করে), কিন্তু তার ভেতরের সবকিছু closed shadow root-এ লুকানো — বাইরের
+  // কোনো CSS selector বা JS querySelector সেই সাবট্রি ধরতে পারে না।
+  function createShadowHost(parent) {
+    hostCounter += 1;
+    var host = DCE('div');
+    host.id = 've-host-' + hostCounter;
+    // ইনলাইন style attribute ইচ্ছাকৃতভাবে এড়ানো হয়েছে (পেইজের CSS দিয়ে
+    // override হওয়ার সুযোগ কমাতে সব positioning shadow root এর :host rule
+    // থেকে আসে); position/left/top শুধু syncRigSize() থেকে সেট হয় কারণ
+    // সেগুলো dynamic video geometry-নির্ভর, static CSS দিয়ে সম্ভব না।
+    APP(parent, host);
+    return host;
+  }
+
+  function injectStyles(root) {
+    var styleEl = DCE('style');
+    styleEl.textContent = CSS_TEXT;
+    root.appendChild(styleEl);
+  }
+
+  function syncRigSize(video, shadowHost, rig) {
     var vRect = video.getBoundingClientRect();
     var pRect = video.parentElement.getBoundingClientRect();
     var leftPx = (vRect.left - pRect.left) + 'px';
@@ -181,13 +202,20 @@
     var widthPx = vRect.width + 'px';
     var heightPx = (vRect.height * (1 - CFG.BOTTOM_SAFE_ZONE)) + 'px';
 
-    rig.gestureLayer.style.left = leftPx;
-    rig.gestureLayer.style.top = topPx;
+    // shadow host কে video-এর ঠিক উপরে বসানো হচ্ছে; ভেতরের gestureLayer/
+    // scrim/controlBar সবই host-এর সাপেক্ষে (0,0 থেকে 100%) পজিশন করা,
+    // তাই host একবার সঠিক জায়গায় বসলে ভেতরের সবকিছু এমনিই align হয়ে যায়
+    shadowHost.style.position = 'absolute';
+    shadowHost.style.left = leftPx;
+    shadowHost.style.top = topPx;
+    shadowHost.style.width = widthPx;
+    shadowHost.style.height = vRect.height + 'px';
+    shadowHost.style.pointerEvents = 'none';
+    shadowHost.style.zIndex = '2147483000';
+
     rig.gestureLayer.style.width = widthPx;
     rig.gestureLayer.style.height = heightPx;
 
-    rig.scrim.style.left = leftPx;
-    rig.scrim.style.top = topPx;
     rig.scrim.style.width = widthPx;
     rig.scrim.style.height = vRect.height + 'px';
   }
@@ -223,13 +251,16 @@
     return { show: show, hide: hide };
   }
 
-  function buildRig(video, container) {
+  // root প্যারামিটার এখন shadow root — সব element আগের মতোই তৈরি হয়, শুধু
+  // APP(container, ...) এর জায়গায় APP(root, ...) ব্যবহার হচ্ছে, ফলে পুরো
+  // রিগ shadow boundary-এর ভেতরে বন্দী থাকে।
+  function buildRig(video, root, shadowHost) {
     var mode = { active: true };
     var uiState = { isFullscreen: false, controlsExpanded: true, autoHideTimer: null };
 
     var scrim = DCE('div');
     scrim.className = 've-scrim';
-    APP(container, scrim);
+    APP(root, scrim);
 
     var gestureLayer = DCE('div');
     gestureLayer.className = 've-gesture-layer';
@@ -240,7 +271,7 @@
     APP(gestureLayer, leftZone);
     APP(gestureLayer, centerZone);
     APP(gestureLayer, rightZone);
-    APP(container, gestureLayer);
+    APP(root, gestureLayer);
 
     var badgeHost = DCE('div');
     badgeHost.className = 've-badge-host';
@@ -263,7 +294,7 @@
 
     var controlBar = DCE('div');
     controlBar.className = 've-control-bar';
-    APP(container, controlBar);
+    APP(root, controlBar);
 
     var playBtn = makeButton(L.PLAY, 'Play / Pause');
     var volBtn = makeButton(L.VOL, 'Volume boost');
@@ -285,7 +316,7 @@
     attachPlayPauseToggle(video, playBtn);
     var volCleanup = attachVolumeBoost(video, volBtn);
     attachFitToggle(video, fitBtn, function () { return uiState.isFullscreen; });
-    attachFullscreenToggle(video, container, fsBtn);
+    attachFullscreenToggle(video, shadowHost, fsBtn);
     attachPipToggle(video, pipBtn);
     attachRotateToggle(rotateBtn);
 
@@ -302,6 +333,7 @@
     function applyMode() {
       var active = mode.active;
       gestureLayer.style.pointerEvents = active ? 'auto' : 'none';
+      shadowHost.style.pointerEvents = active ? 'auto' : 'none';
       CLS(scrim).toggle('ve-scrim--on', active);
       allButtons.forEach(function (b) {
         b.style.pointerEvents = (uiState.controlsExpanded && !b.disabled) ? 'auto' : 'none';
@@ -331,8 +363,8 @@
     ON(closeBtn, 'click', function (e) { e.stopPropagation(); hideControls(); });
 
     if (!IS_TOUCH) {
-      ON(container, 'mouseenter', showControls);
-      ON(container, 'mouseleave', hideControls);
+      ON(shadowHost, 'mouseenter', showControls);
+      ON(shadowHost, 'mouseleave', hideControls);
       uiState.controlsExpanded = false;
       CLS(controlBar).add('ve-control-bar--hidden');
     } else {
@@ -382,9 +414,9 @@
         if (volCleanup) volCleanup();
         OFF(document, 'visibilitychange', onVisChange);
         OFF(window, 'blur', onBlur);
-        gestureLayer.remove();
-        controlBar.remove();
-        scrim.remove();
+        // shadowHost.remove() পুরো shadow subtree (gestureLayer, scrim,
+        // controlBar, badges, <style>) একবারেই সরিয়ে দেয়
+        shadowHost.remove();
         clearTimeout(uiState.autoHideTimer);
         if (this._extraCleanup) this._extraCleanup();
       }
@@ -611,13 +643,12 @@
     };
   }
 
-  function attachFullscreenToggle(video, container, btn) {
+  function attachFullscreenToggle(video, shadowHost, btn) {
     if (!SUPPORTS_FULLSCREEN) return;
     ON(btn, 'click', async function (e) {
       e.stopPropagation();
       try {
         if (document.fullscreenElement) await document.exitFullscreen();
-        else if (container.requestFullscreen) await container.requestFullscreen();
         else if (video.requestFullscreen) await video.requestFullscreen();
       } catch (err) {
         console.warn('[video-enhancer] fullscreen toggle failed:', err.message);
@@ -700,20 +731,21 @@
         if (!r.ok) throw new Error('styles.css HTTP ' + r.status);
         return r.text();
       })
-      .then(function (cssText) { runInit(cssText); })
+      .then(function (cssText) { CSS_TEXT = cssText; init(); })
       .catch(function (err) {
         console.warn('[video-enhancer] failed to load styles.css, proceeding without it:', err.message);
-        runInit('');
+        CSS_TEXT = '';
+        init();
       });
   }
 
-  function runInit(cssText) {
+  function runInit() {
     if (document.readyState === 'loading') {
-      ON(document, 'DOMContentLoaded', function () { init(cssText); });
+      ON(document, 'DOMContentLoaded', boot);
     } else {
-      init(cssText);
+      boot();
     }
   }
 
-  boot();
+  runInit();
 })();
