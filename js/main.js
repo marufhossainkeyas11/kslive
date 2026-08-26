@@ -576,13 +576,25 @@
         uiState.isFullscreen = iAmFullscreen;
         fsBtn.textContent = iAmFullscreen ? L.EXIT_FULLSCREEN : L.FULLSCREEN;
         syncFullscreenGatedButtons();
-        // fullscreen বন্ধ হয়ে গেলে (ESC, browser back, অন্য কোনোভাবে —
-        // শুধু আমাদের fsBtn ক্লিক না) video/shadowHost যেন সবসময় আগের DOM
-        // জায়গায় ফেরত যায় (আমাদের নিজস্ব fallback ব্যবহার করা হলে), তাই
-        // এখানেও restore কল করা — fsCtl.restoreIfMoved() ইতিমধ্যে restore
-        // হয়ে থাকলে (বা সাইটের বাটন দিয়ে fullscreen হয়ে থাকলে, যেখানে
-        // আমরা কিছুই move করিনি) কিছু করে না (idempotent/no-op)।
-        if (!iAmFullscreen) fsCtl.restoreIfMoved();
+        if (iAmFullscreen) {
+          // সাইটের নিজস্ব বাটন দিয়ে fullscreen হলে (আমাদের own fallback
+          // ব্যবহার না হলে) shadowHost-কে fullscreenElement-এর ভেতরে
+          // adopt করা হচ্ছে — নাহলে rig fullscreen-এর top layer-এর বাইরে
+          // পড়ে থাকায় অদৃশ্য থেকে যায়। usingOwnFallback true থাকলে বা
+          // ইতিমধ্যে adopt হয়ে থাকলে এটা no-op।
+          fsCtl.adoptIntoSiteFullscreen();
+        } else {
+          // fullscreen বন্ধ হয়ে গেলে (ESC, browser back, অন্য কোনোভাবে —
+          // শুধু আমাদের fsBtn ক্লিক না) video/shadowHost যেন সবসময় আগের DOM
+          // জায়গায় ফেরত যায় (আমাদের নিজস্ব fallback ব্যবহার করা হলে), তাই
+          // এখানেও restore কল করা — fsCtl.restoreIfMoved() ইতিমধ্যে restore
+          // হয়ে থাকলে (বা সাইটের বাটন দিয়ে fullscreen হয়ে থাকলে, যেখানে
+          // আমরা কিছুই move করিনি) কিছু করে না (idempotent/no-op)। একইভাবে
+          // shadowHost সাইটের fullscreenElement-এ adopt হয়ে থাকলে সেটাও
+          // এখানে আগের জায়গায় ফেরত পাঠানো হচ্ছে।
+          fsCtl.restoreIfMoved();
+          fsCtl.releaseFromSiteFullscreen();
+        }
       },
       destroy: function () {
         gestureCtl.forceReset();
@@ -603,6 +615,7 @@
         // restoreIfMoved() no-op — সাইটের fullscreen অক্ষতই থাকে, যা
         // ঠিক আছে কারণ সেটা আমাদের rig destroy হওয়ার সাথে সম্পর্কহীন।
         fsCtl.restoreIfMoved();
+        fsCtl.releaseFromSiteFullscreen();
         // shadowHost.remove() পুরো shadow subtree (gestureLayer, scrim,
         // controlBar, badges, <style>) একবারেই সরিয়ে দেয়
         shadowHost.remove();
@@ -874,6 +887,21 @@
     var hostOriginalPosition = '';
     var usingOwnFallback = false;
 
+    // --- সাইটের নিজস্ব fullscreen-এর ভেতরে shadowHost "adopt" করার state ---
+    // কারণ: shadowHost সবসময় document.body-এর সরাসরি child (position:fixed)।
+    // fullscreen API-তে যে element fullscreen হয় সেটাই শুধু "top layer"-এ
+    // প্রমোট হয় এবং viewport জুড়ে রেন্ডার হয় — সেই element-এর subtree-এর
+    // বাইরের যেকোনো কিছু (আমাদের shadowHost সহ, position:fixed +
+    // z-index:2147483647 থাকা সত্ত্বেও) fullscreen চলাকালীন আর দেখা যায় না,
+    // এটা browser rendering-এর স্পেসিফিকেশন-লেভেল আচরণ, z-index দিয়ে
+    // এড়ানো যায় না। তাই সাইটের নিজস্ব বাটন দিয়ে fullscreen হলে
+    // (video.requestFullscreen() আমরা কল করিনি, সাইট নিজে করেছে) আমাদের
+    // shadowHost-কে সাময়িকভাবে সেই fullscreenElement-এর ভেতরে সরিয়ে
+    // নিতে হবে, নাহলে আমাদের কন্ট্রোল বার/জেসচার লেয়ার fullscreen-এর
+    // ভেতরে অদৃশ্য থেকে যায় (ইউজার রিপোর্ট করা বাগ এটাই)।
+    var movedIntoSiteFullscreen = false;
+    var siteFsOriginalParent = null, siteFsOriginalNextSibling = null;
+
     function buildWrapper() {
       var w = DCE('div');
       w.className = 've-fullscreen-wrapper';
@@ -950,6 +978,40 @@
       usingOwnFallback = false;
     }
 
+    // সাইটের fullscreenElement-এর ভেতরে shadowHost-কে সরিয়ে "adopt" করে,
+    // যাতে এটা top-layer subtree-এর অংশ হয়ে যায় এবং আমাদের নিজস্ব
+    // fallback (enterOwnFallback) চলার সময় কিছু করে না — সেই পাথে
+    // shadowHost ইতিমধ্যেই fullscreenWrapper-এর ভেতরে থাকে, যেটা নিজেই
+    // fullscreenElement।
+    function adoptIntoSiteFullscreen() {
+      if (usingOwnFallback || movedIntoSiteFullscreen) return;
+      var fsEl = document.fullscreenElement;
+      if (!fsEl || !fsEl.contains(video)) return;
+      // fsEl নিজেই <video> হলে তার ভেতরে কোনো visible child বসানো যায় না
+      // (video element arbitrary DOM overlay রেন্ডার করে না) — এই কেসে
+      // adopt করার কিছু নেই, click handler-এই এটা আলাদাভাবে handle করা
+      // হয় (own fallback-এ পাঠিয়ে)।
+      if (fsEl === video) return;
+      if (shadowHost.parentNode === fsEl) return;
+      siteFsOriginalParent = shadowHost.parentNode;
+      siteFsOriginalNextSibling = shadowHost.nextSibling;
+      shadowHost.style.position = 'absolute';
+      fsEl.appendChild(shadowHost);
+      movedIntoSiteFullscreen = true;
+    }
+
+    function releaseFromSiteFullscreen() {
+      if (!movedIntoSiteFullscreen) return;
+      shadowHost.style.position = 'fixed';
+      if (siteFsOriginalParent) {
+        siteFsOriginalParent.insertBefore(shadowHost, siteFsOriginalNextSibling);
+      } else {
+        APP(document.body, shadowHost);
+      }
+      siteFsOriginalParent = null; siteFsOriginalNextSibling = null;
+      movedIntoSiteFullscreen = false;
+    }
+
     function delay(ms) { return new Promise(function (res) { setTimeout(res, ms); }); }
 
     ON(btn, 'click', async function (e) {
@@ -988,11 +1050,24 @@
         try {
           siteBtn.click();
           await delay(SITE_BTN_VERIFY_MS);
-          if (document.fullscreenElement && document.fullscreenElement.contains(video)) return; // সফল
+          if (document.fullscreenElement && document.fullscreenElement.contains(video)) {
+            // fullscreenElement যদি সরাসরি <video> ট্যাগ হয় (অনেক সাইট
+            // কোনো wrapper ছাড়াই সরাসরি video.requestFullscreen() কল করে),
+            // তাহলে তার ভেতরে আমাদের shadowHost বসানোর কোনো জায়গাই নেই
+            // (video element arbitrary child overlay হিসেবে রেন্ডার করে
+            // না) — ফলে আমাদের কন্ট্রোল বার/জেসচার লেয়ার fullscreen-এর
+            // ভেতরে একদমই দেখা যাবে না, ঠিক এই বাগটাই রিপোর্ট হয়েছে।
+            // এই কেসে সাইটের fullscreen থেকে বেরিয়ে নিচের নিজস্ব
+            // fallback (wrapper, যেখানে video+rig একসাথে থাকে) এ চলে
+            // যাওয়া হচ্ছে।
+            if (document.fullscreenElement !== video) return; // সফল — fullscreenchange-এ shadowHost adopt হবে (adoptIntoSiteFullscreen দেখুন)
+            try { await document.exitFullscreen(); } catch (exitErr) {}
+          }
         } catch (err) {
           console.warn('[video-enhancer] site fullscreen button click failed:', err.message);
         }
-        // সাইটের বাটন থাকলেও কাজ করেনি — নিচে fallback এ চলে যাওয়া হচ্ছে
+        // সাইটের বাটন থাকলেও কাজ করেনি (বা সরাসরি video-কেই fullscreen
+        // করে ফেলেছে, যেখানে overlay বসানো যায় না) — নিচে fallback এ চলে যাওয়া হচ্ছে
       }
 
       // এন্ট্রি পথ ২: আমাদের নিজস্ব fallback — video + rig একসাথে একটা
@@ -1009,7 +1084,9 @@
     });
 
     return {
-      restoreIfMoved: exitOwnFallback
+      restoreIfMoved: exitOwnFallback,
+      adoptIntoSiteFullscreen: adoptIntoSiteFullscreen,
+      releaseFromSiteFullscreen: releaseFromSiteFullscreen
     };
   }
 
