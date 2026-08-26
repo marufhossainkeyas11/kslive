@@ -1,39 +1,56 @@
 /*!
  * Video Enhancer - main.js
  * ============================================================================
- * এই সংস্করণে নতুন কাঠামোগত ফিক্স যোগ হয়েছে: SHADOW DOM ISOLATION।
+ * এই সংস্করণে দুটো নতুন হার্ডেনিং যোগ হয়েছে (কিছু সাইটে দেখা গিয়েছিল যে
+ * Ctrl:Us সক্রিয় থাকা সত্ত্বেও স্ক্রিনে ক্লিক করলে সাইটের নিজস্ব কন্ট্রোল
+ * প্যানেল ভেসে উঠছিল এবং সেটা আমাদের UI-এর উপরে দেখাচ্ছিল — এর মানে দুটো
+ * সমস্যা একসাথে ঘটছিল: (i) ইভেন্ট সাইটের JS পর্যন্ত পৌঁছে যাচ্ছিল, এবং
+ * (ii) সাইটের প্যানেল আমাদের চেয়ে "উপরে" চলে আসছিল):
  *
- *  (G) CLOSED SHADOW ROOT — আগে সব UI element (gesture layer, scrim,
- *      control bar, badges) সরাসরি video-এর parent (light DOM)-এ বসত।
- *      এর ফলে হোস্ট পেইজের কোনো global CSS rule (যেমন `* { all: unset
- *      !important }` টাইপ কিছু, বা কোনো অতি-agressive reset/override)
- *      সরাসরি এসে আমাদের style ভেঙে দিতে পারত — এবং উল্টোদিকে, পেইজের
- *      JS `document.querySelector('.ve-btn')` দিয়ে আমাদের DOM ধরে
- *      manipulate করতে পারত।
+ *  (G) CLOSED SHADOW ROOT — প্রতিটা video-এর জন্য একটা host <div> তৈরি
+ *      হয়, তার উপর `attachShadow({ mode: 'closed' })` কল হয়। রিগের সব
+ *      element (gestureLayer/scrim/controlBar/badges) ও CSS — সবকিছু এই
+ *      shadow root এর ভেতরে বসে। CSS cascade shadow boundary পার হয় না
+ *      (styles.css এর `:host { all: initial }` এটাকে আরও pin করে), এবং
+ *      mode:'closed' হওয়ায় পেইজের কোনো script এই সাবট্রি ধরতে পারে না।
  *
- *      এখন প্রতিটা video-এর জন্য একটা host <div> (id="ve-host-N") তৈরি
- *      হয় video-এর parent-এ, এবং তার উপর `attachShadow({ mode: 'closed' })`
- *      কল হয়। রিগের সব element (gestureLayer/scrim/controlBar/badges)
- *      এবং CSS <style> ট্যাগ — সবকিছু এই shadow root এর ভেতরে বসে।
+ *  (H) BODY-LEVEL FIXED HOST — আগে host video-এর parent-এর ভেতরে বসত,
+ *      অর্থাৎ সেই parent (বা তার কোনো ancestor) যদি নিজেই একটা নতুন
+ *      stacking context তৈরি করে (transform/filter/opacity<1/will-change/
+ *      isolation ইত্যাদি দিয়ে — অনেক custom video player ঠিক এটাই করে),
+ *      তাহলে আমাদের host সেই context-এর ভেতরে বন্দী থেকে যেত এবং সাইটের
+ *      sibling element (তাদের নিজস্ব control panel) আমাদের চেয়ে সামান্য
+ *      z-index দিয়েও উপরে চলে আসতে পারত — কারণ z-index শুধু একই stacking
+ *      context-এর ভেতরেই তুলনীয়। এখন host সরাসরি `document.body`-এর child
+ *      এবং `position: fixed` — তাই এটা পেইজের যেকোনো nested stacking
+ *      context থেকে সম্পূর্ণ বেরিয়ে top-level এ থাকে, `z-index: 2147483647`
+ *      (max safe 32-bit) তখন প্রকৃতপক্ষে "সবার উপরে" গ্যারান্টি দেয়। video
+ *      এর সাথে geometry sync রাখতে getBoundingClientRect() + scroll listener
+ *      ব্যবহার হয়েছে (আগে শুধু parent-relative offset ছিল, এখন viewport-
+ *      relative + scroll offset compensate করা হচ্ছে, কারণ position:fixed
+ *      viewport-এর সাপেক্ষে, document-এর সাপেক্ষে না)।
  *
- *      ফলাফল:
- *        - CSS cascade shadow boundary পার হয় না, তাই পেইজের কোনো rule
- *          (নির্দিষ্ট selector হোক বা `all: unset` টাইপ ইউনিভার্সাল হোক)
- *          shadow root-এর ভেতরের element স্পর্শ করতে পারে না। styles.css
- *          এর `:host { all: initial; ... }` এই boundary-কে আরও pin করে।
- *        - mode:'closed' হওয়ায় `hostEl.shadowRoot` বাইরে থেকে সবসময়
- *          `null` — পেইজের কোনো script (ownProperty রেফারেন্স না থাকলে)
- *          shadow root-এর ভেতরে querySelector/manipulate করতে পারবে না।
- *          rig-এর ভেতরেই একমাত্র closure-scoped রেফারেন্স রাখা হয়।
- *        - প্রতিটা rig-এর নিজস্ব শেডো রুট, তাই একাধিক ভিডিওতে id/class
- *          collision এর কোনো ঝুঁকি নেই, প্রতিটাই সম্পূর্ণ স্বতন্ত্র।
+ *  (I) CAPTURE-PHASE EVENT CONTAINMENT — শুধু `stopPropagation()` bubble-
+ *      phase এ কল করা যথেষ্ট না, কারণ অনেক ভিডিও প্লেয়ার নিজেদের listener
+ *      `document`/ancestor-এ **capture phase**-এ বসায় (তৃতীয় আর্গুমেন্ট
+ *      `true`), যেটা bubble-phase stopPropagation-এর আগেই ফায়ার হয়ে যায়।
+ *      এখন Ctrl:Us mode সক্রিয় থাকলে shadow root-এর প্রতিটা top-level
+ *      element-এ pointer/mouse/touch/click পরিবারের ইভেন্টে capture-phase
+ *      listener বসানো আছে যা `stopPropagation()` + `stopImmediatePropagation()`
+ *      কল করে — অর্থাৎ ইভেন্ট composed path বেয়ে বাইরের document পর্যন্ত
+ *      retarget হয়ে পৌঁছানোর আগেই থেমে যায়। সততার খাতিরে এটাও লেখা থাকা
+ *      দরকার: browser spec অনুযায়ী composed ইভেন্ট শুরুতে outer document
+ *      পর্যন্ত dispatch path তৈরি *করেই* — capture-phase interception এই
+ *      path-কে "কার্যকরভাবে" থামায় (কোনো listener পরের ধাপ পায় না), কিন্তু
+ *      কোনো API নেই যা browser-কে সেই dispatch path তৈরি করা থেকেই আটকায়।
+ *      Ctrl:Site এ এই listener-গুলো disable থাকে, যাতে সাইট তখন স্বাভাবিক
+ *      নিয়ন্ত্রণ ফিরে পায়।
  *
- *  আগের সংস্করণ থেকে বজায় থাকা নীতিগুলো:
+ *  বাকি নীতি আগের সংস্করণ থেকেই বজায়:
  *  (A) single-source-of-truth mode switching, (B) playbackRate ownership
  *  lock, (C) honest UI for impossible ops (Volume Boost hides on failure),
- *  (D) generation-counter state machines for badges, (E) style extraction
- *  (main.js শুধু className টগল করে, ইনলাইন cssText নেই), (F) opaque scrim
- *  for control ownership।
+ *  (D) generation-counter state machines for badges, (E) style extraction,
+ *  (F) opaque scrim for control ownership।
  * ============================================================================
  */
 (function () {
@@ -128,8 +145,7 @@
     }
     video.setAttribute(ATTR_FLAG, '1');
 
-    var parent = ensureRelativeParent(video);
-    var shadowHost = createShadowHost(parent);
+    var shadowHost = createShadowHost();
     var root = shadowHost.attachShadow({ mode: 'closed' });
 
     injectStyles(root);
@@ -142,6 +158,10 @@
     var ro = new ResizeObserver(function () { syncRigSize(video, shadowHost, rig); });
     ro.observe(video);
     var onWinResize = ON(window, 'resize', function () { syncRigSize(video, shadowHost, rig); });
+    // position:fixed viewport-এর সাপেক্ষে, তাই পেইজের যেকোনো ancestor
+    // scroll (window scroll ছাড়াও, কারণ scroll bubble করে) geometry পাল্টে
+    // দিতে পারে — capture:true দিয়ে সব scroll ধরা হচ্ছে
+    var onScroll = ON(window, 'scroll', function () { syncRigSize(video, shadowHost, rig); }, { capture: true, passive: true });
     var onFsChange = ON(document, 'fullscreenchange', function () {
       setTimeout(function () { syncRigSize(video, shadowHost, rig); }, 50);
       rig.onFullscreenChange();
@@ -152,6 +172,7 @@
         rig.destroy();
         ro.disconnect();
         OFF(window, 'resize', onWinResize);
+        OFF(window, 'scroll', onScroll, { capture: true });
         OFF(document, 'fullscreenchange', onFsChange);
         cleanupObserver.disconnect();
       }
@@ -161,30 +182,37 @@
     rig._extraCleanup = function () {
       ro.disconnect();
       OFF(window, 'resize', onWinResize);
+      OFF(window, 'scroll', onScroll, { capture: true });
       OFF(document, 'fullscreenchange', onFsChange);
       cleanupObserver.disconnect();
     };
   }
 
-  function ensureRelativeParent(video) {
-    var parent = video.parentElement;
-    var style = getComputedStyle(parent);
-    if (style.position === 'static') parent.style.position = 'relative';
-    return parent;
-  }
-
-  // host নিজে সাধারণ light-DOM element (তাই layout/position স্বাভাবিকভাবে
-  // কাজ করে), কিন্তু তার ভেতরের সবকিছু closed shadow root-এ লুকানো — বাইরের
-  // কোনো CSS selector বা JS querySelector সেই সাবট্রি ধরতে পারে না।
-  function createShadowHost(parent) {
+  // host সরাসরি document.body এর child — video-এর parent বা তার কোনো
+  // ancestor-এ বসানো হয় না। এর কারণ: parent-এর ভেতরে বসালে সেই parent
+  // নিজে (বা মাঝের কোনো ancestor) transform/filter/opacity<1/will-change/
+  // isolation দিয়ে নতুন stacking context বানালে আমরা সেই context-এর ভেতরে
+  // বন্দী হয়ে যেতাম — তখন সাইটের sibling element সামান্য z-index দিয়েও
+  // আমাদের উপরে চলে আসতে পারত। body-এর direct child + position:fixed
+  // হওয়ায় আমরা পেইজের যেকোনো nested stacking context থেকে বেরিয়ে
+  // top-level এ থাকি, তাই max z-index তখন প্রকৃত অর্থে "সবার উপরে" হয়।
+  function createShadowHost() {
     hostCounter += 1;
     var host = DCE('div');
     host.id = 've-host-' + hostCounter;
-    // ইনলাইন style attribute ইচ্ছাকৃতভাবে এড়ানো হয়েছে (পেইজের CSS দিয়ে
-    // override হওয়ার সুযোগ কমাতে সব positioning shadow root এর :host rule
-    // থেকে আসে); position/left/top শুধু syncRigSize() থেকে সেট হয় কারণ
-    // সেগুলো dynamic video geometry-নির্ভর, static CSS দিয়ে সম্ভব না।
-    APP(parent, host);
+    // position/z-index ইনলাইন-এই বসানো হচ্ছে (শুধু light-DOM host element
+    // এর উপর, ভেতরের কোনো কিছুর উপর না) — কারণ position:fixed নিজেই একটা
+    // নতুন stacking context তৈরি করে, তাই এখান থেকে এর নিচে যা কিছু (shadow
+    // root এর ভেতরের সব) স্বয়ংক্রিয়ভাবে একই top-level context-এ থাকে।
+    host.style.position = 'fixed';
+    host.style.left = '0';
+    host.style.top = '0';
+    host.style.margin = '0';
+    host.style.padding = '0';
+    host.style.border = '0';
+    host.style.pointerEvents = 'none';
+    host.style.zIndex = '2147483647'; // max safe 32-bit z-index
+    APP(document.body, host);
     return host;
   }
 
@@ -195,23 +223,17 @@
   }
 
   function syncRigSize(video, shadowHost, rig) {
+    // position:fixed viewport-relative, তাই getBoundingClientRect() থেকে
+    // সরাসরি left/top ব্যবহার করা যায় — কোনো parent offset বিয়োগ করার
+    // দরকার নেই (আগে parent-relative absolute positioning এ যেটা লাগত)
     var vRect = video.getBoundingClientRect();
-    var pRect = video.parentElement.getBoundingClientRect();
-    var leftPx = (vRect.left - pRect.left) + 'px';
-    var topPx = (vRect.top - pRect.top) + 'px';
     var widthPx = vRect.width + 'px';
     var heightPx = (vRect.height * (1 - CFG.BOTTOM_SAFE_ZONE)) + 'px';
 
-    // shadow host কে video-এর ঠিক উপরে বসানো হচ্ছে; ভেতরের gestureLayer/
-    // scrim/controlBar সবই host-এর সাপেক্ষে (0,0 থেকে 100%) পজিশন করা,
-    // তাই host একবার সঠিক জায়গায় বসলে ভেতরের সবকিছু এমনিই align হয়ে যায়
-    shadowHost.style.position = 'absolute';
-    shadowHost.style.left = leftPx;
-    shadowHost.style.top = topPx;
+    shadowHost.style.left = vRect.left + 'px';
+    shadowHost.style.top = vRect.top + 'px';
     shadowHost.style.width = widthPx;
     shadowHost.style.height = vRect.height + 'px';
-    shadowHost.style.pointerEvents = 'none';
-    shadowHost.style.zIndex = '2147483000';
 
     rig.gestureLayer.style.width = widthPx;
     rig.gestureLayer.style.height = heightPx;
@@ -330,6 +352,38 @@
     }
     syncFullscreenGatedButtons();
 
+    // Ctrl:Us সক্রিয় থাকলে shadow root-এর ভেতরে ঘটা কোনো pointer/mouse/
+    // touch/click ইভেন্ট যেন capture-phase এই থেমে যায় — bubble-phase
+    // stopPropagation যথেষ্ট না, কারণ কিছু সাইট নিজেদের video-control
+    // listener document/ancestor-এ capture:true দিয়ে বসায়, যেটা bubble-
+    // phase এর আগে ফায়ার হয়। composed retargeted ইভেন্ট shadow boundary
+    // পার হয়ে বাইরে dispatch হওয়ার path browser নিজে তৈরি করেই (এটা থামানোর
+    // কোনো API নেই), কিন্তু capture-phase এ stopPropagation+stopImmediate
+    // Propagation কল করলে dispatch chain-এর পরের কোনো listener (আমাদের
+    // নিজেরটা ছাড়া) সেই ইভেন্ট পায় না — কার্যকরভাবে containment হয়।
+    var CONTAINED_EVENTS = ['pointerdown', 'pointerup', 'pointermove', 'pointercancel',
+      'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick',
+      'touchstart', 'touchend', 'touchmove', 'touchcancel', 'contextmenu', 'wheel'];
+    var containmentBound = false;
+    function containEvent(e) {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+    function bindContainment() {
+      if (containmentBound) return;
+      containmentBound = true;
+      CONTAINED_EVENTS.forEach(function (evName) {
+        ON(root, evName, containEvent, { capture: true });
+      });
+    }
+    function unbindContainment() {
+      if (!containmentBound) return;
+      containmentBound = false;
+      CONTAINED_EVENTS.forEach(function (evName) {
+        OFF(root, evName, containEvent, { capture: true });
+      });
+    }
+
     function applyMode() {
       var active = mode.active;
       gestureLayer.style.pointerEvents = active ? 'auto' : 'none';
@@ -340,6 +394,9 @@
       });
       CLS(switchBtn).toggle('ve-btn--switch-site', !active);
       switchBtn.textContent = active ? L.SWITCH_ON : L.SWITCH_OFF;
+      // Ctrl:Site এ containment বন্ধ — তখন নিয়ন্ত্রণ ইচ্ছাকৃতভাবেই সাইটের,
+      // ইভেন্ট স্বাভাবিকভাবে সাইটের listener পর্যন্ত পৌঁছানো উচিত
+      if (active) bindContainment(); else unbindContainment();
     }
 
     function showControls() {
@@ -412,6 +469,7 @@
         gestureCtl.forceReset();
         gestureCtl.destroy();
         if (volCleanup) volCleanup();
+        unbindContainment();
         OFF(document, 'visibilitychange', onVisChange);
         OFF(window, 'blur', onBlur);
         // shadowHost.remove() পুরো shadow subtree (gestureLayer, scrim,
