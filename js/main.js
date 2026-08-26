@@ -530,15 +530,40 @@
       resetAutoHideTimer();
     }
 
-    function onSingleTapAnywhere() { showControls(); }
-    ON(leftZone, 'pointerdown', onSingleTapAnywhere);
-    ON(rightZone, 'pointerdown', onSingleTapAnywhere);
-    ON(centerZone, 'pointerdown', onSingleTapAnywhere);
+    // প্যানেলের ভেতরে (playBtn/volBtn/fitBtn/... যেকোনো বাটনে) ইন্টার‌্যাকশন
+    // হলে auto-hide টাইমার রিসেট হওয়া উচিত — নাহলে ইউজার প্যানেলের মধ্যে
+    // বাটন খুঁজতে থাকা অবস্থাতেই ৩ সেকেন্ড নিষ্ক্রিয়তার হিসাবে প্যানেলটা
+    // হঠাৎ হাইড হয়ে যেতে পারে। controlBar-এ একটাই delegated pointerdown
+    // listener বসিয়ে দেওয়া হচ্ছে (bubble করে সব বাটন থেকেই পৌঁছাবে),
+    // প্রতিটা বাটনে আলাদা করে হুক করার দরকার নেই।
+    ON(controlBar, 'pointerdown', resetAutoHideTimer);
+
+    // আগে leftZone/rightZone/centerZone-এ pointerdown হলেই সাথে সাথে
+    // showControls() কল হতো — মানে ডাবল-ট্যাপ সিক বা লং-প্রেস বুস্টের
+    // *প্রথম* ট্যাপেই ফুল কন্ট্রোল প্যানেল খুলে যেত, যদিও সেই জেসচারটা
+    // আসলে সিক/বুস্ট হিসেবে resolve হতো। এখন সেই সিদ্ধান্ত (single tap
+    // vs seek/double-tap) attachUnifiedGestures-এর ভেতরেই resolve হয়
+    // (handleZoneTap/handleCenterTap দেখুন, MULTI_TAP_WINDOW_MS পরে) —
+    // শুধু সত্যিকারের single tap-এই onSingleTap কল হয়ে প্যানেল খোলে;
+    // ডাবল-ট্যাপ সিক করলে শুধু সিক ব্যাজ (+10s/-10s) দেখা যায়, প্যানেল
+    // খোলে না — প্রিমিয়াম প্লেয়ারগুলোর (YouTube/Netflix ধাঁচের) মতো।
+    // এই কারণে single tap-এ প্যানেল খুলতে এখন সামান্য বিলম্ব (সর্বোচ্চ
+    // MULTI_TAP_WINDOW_MS ≈ ৩৫০ms) হয় — দ্বিতীয় ট্যাপ আসছে কিনা যাচাই
+    // করার জন্য এটুকু অপেক্ষা অনিবার্য।
 
     var gestureCtl = attachUnifiedGestures(video, {
       leftZone: leftZone, centerZone: centerZone, rightZone: rightZone,
-      boostBadge: boostBadge, seekBadgeL: seekBadgeL, seekBadgeR: seekBadgeR
+      boostBadge: boostBadge, seekBadgeL: seekBadgeL, seekBadgeR: seekBadgeR,
+      onSingleTap: showControls,
+      // long-press করে 2x boost চলাকালীন আঙুল স্ক্রিনে ধরে থাকা অবস্থাতেই
+      // auto-hide টাইমার (৩সে) ফায়ার করে প্যানেল হাইড করে দিতে পারত, যেটা
+      // active gesture-এর মাঝখানে জিনিসপত্র অদৃশ্য হয়ে যাওয়ার মতো দেখাত।
+      // বুস্ট শুরুর সাথে সাথে টাইমার থামিয়ে দেওয়া হচ্ছে, রিলিজ হলে (বা
+      // ৮সে সেফটি-ক্যাপে পৌঁছালে) আবার ফ্রেশ কাউন্টডাউন শুরু হচ্ছে।
+      onBoostStart: function () { clearTimeout(uiState.autoHideTimer); },
+      onBoostEnd: function () { resetAutoHideTimer(); }
     });
+
 
     function setMode(active) {
       mode.active = active;
@@ -716,6 +741,7 @@
       video.playbackRate = desiredRate;
       isBoosting = true;
       refs.boostBadge.show('2x');
+      if (refs.onBoostStart) refs.onBoostStart();
 
       clearInterval(boostWatchdog);
       boostWatchdog = setInterval(function () {
@@ -740,6 +766,7 @@
         video.playbackRate = rateBeforeBoost || 1;
       }
       refs.boostBadge.hide();
+      if (refs.onBoostEnd) refs.onBoostEnd();
     }
 
     function resetSeekSeq(side) { clearTimeout(seekSeq[side].timer); seekSeq[side].count = 0; }
@@ -781,7 +808,18 @@
       s.count += 1;
       clearTimeout(s.timer);
       if (s.count >= 2) doSeek(side, s.count - 1);
-      s.timer = setTimeout(function () { s.count = 0; }, CFG.MULTI_TAP_WINDOW_MS);
+      // ৩৫০ms (MULTI_TAP_WINDOW_MS) অপেক্ষা করা হচ্ছে আরেকটা ট্যাপ আসে কিনা
+      // দেখার জন্য। এই টাইমার যদি না-ক্যান্সেল হয়ে ফায়ার করে (মানে এর
+      // মধ্যে আর কোনো ট্যাপ আসেনি), তখনই s.count-এর তখনকার মান দেখে বোঝা
+      // যায় সিকোয়েন্সটা আসলে seek হয়েছিল (>=2) নাকি প্লেইন single tap
+      // (===1) — seek হয়ে থাকলে onSingleTap কল করা হয় না, শুধু সিক ব্যাজ
+      // (doSeek উপরে already show করেছে) দেখানো হয়, ফুল কন্ট্রোল প্যানেল
+      // খোলে না।
+      s.timer = setTimeout(function () {
+        var wasSeek = s.count >= 2;
+        s.count = 0;
+        if (!wasSeek && refs.onSingleTap) refs.onSingleTap();
+      }, CFG.MULTI_TAP_WINDOW_MS);
     }
 
     function handleCenterTap() {
@@ -792,7 +830,14 @@
         centerSeq.count = 0;
         return;
       }
-      centerSeq.timer = setTimeout(function () { centerSeq.count = 0; }, CFG.MULTI_TAP_WINDOW_MS);
+      // এখানে পৌঁছালে count===1 — টাইমার আনক্যান্সেলড ফায়ার করা মানেই
+      // দ্বিতীয় ট্যাপ আসেনি (এলে উপরের ===2 ব্রাঞ্চে timer আগেই clear হয়ে
+      // যেত), তাই এটা নিশ্চিতভাবে single tap — কন্ট্রোল প্যানেল দেখানো
+      // হচ্ছে। ডাবল-ট্যাপ (play/pause টগল) এ প্যানেল খোলে না।
+      centerSeq.timer = setTimeout(function () {
+        centerSeq.count = 0;
+        if (refs.onSingleTap) refs.onSingleTap();
+      }, CFG.MULTI_TAP_WINDOW_MS);
     }
 
     function endPress(pointerId, zoneEl, wasReleaseInsideSameZone) {
