@@ -143,3 +143,19 @@
   background: #fc0e;
   color: #000;
 }
+
+/* Ctrl:Site মোডে switchBtn ছাড়া বাকি সব বাটন এনিমেশন সহ হাইড+কোল্যাপ্স
+   হয়ে যায় — fade + scale-down + max-width কোল্যাপ্স, যাতে খালি জায়গা
+   পড়ে না থেকে switchBtn নিজের জায়গায় পরিপাটিভাবে থাকে */
+.ve-btn--hidden-site-mode {
+  opacity: 0;
+  transform: scale(.7);
+  pointer-events: none;
+  max-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: 0;
+  margin-right: 0;
+  overflow: hidden;
+  transition: transform .18s ease, opacity .15s ease, max-width .18s ease, padding .18s ease;
+}
