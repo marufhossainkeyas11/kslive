@@ -45,7 +45,15 @@
     SEEK_STEP_SECONDS: 10,
     BOOST_SPEED: 2,
     BOOST_WATCHDOG_MS: 300,
-    BOOST_MAX_DURATION_MS: 8000,
+    // এটা কোনো "boost কতক্ষণ চলবে" ফিচার-লিমিট না — pointerup/pointercancel/
+    // lostpointercapture/pointerleave (এবং blur/visibilitychange, buildRig
+    // এ wired) সবই ইতিমধ্যে সঠিকভাবে release ধরে endBoost() কল করে, প্লাস
+    // setPointerCapture ব্যবহার করা হয় (তাই আঙুল zone-এর বাইরে সরে গেলেও
+    // event miss হয় না)। এটা শুধুই একটা backstop — যদি কোনোভাবে *সবগুলো*
+    // release-detection path একসাথে ব্যর্থ হয় (যেমন ব্রাউজার bug), তাহলে
+    // playbackRate যেন 2x-এ চিরস্থায়ীভাবে আটকে না থাকে। যতক্ষণ ইউজার সত্যিই
+    // চেপে ধরে রাখে ততক্ষণ boost চলা উচিত — তাই এই মান অনেক বড় রাখা হয়েছে।
+    BOOST_SAFETY_BACKSTOP_MS: 120000,
     AUTO_HIDE_MS: 3000,
     BADGE_VISIBLE_MS: 550,
     BADGE_TRANSITION_MS: 180,
@@ -491,8 +499,16 @@
       gestureLayer.style.pointerEvents = active ? 'auto' : 'none';
       shadowHost.style.pointerEvents = active ? 'auto' : 'none';
       CLS(scrim).toggle('ve-scrim--on', active);
+      // Ctrl:Site মোডে (active===false) আমাদের overlay-র একমাত্র কাজ হলো
+      // ফিরে আসার রাস্তা (switchBtn) দেখানো — বাকি সব বাটন (play/pause,
+      // volume, fit, fullscreen, pip, rotate, এমনকি close/× ) অ্যানিমেশন
+      // সহ হাইড হয়ে যায়। switchBtn resetAutoHideTimer/hideControls থেকেও
+      // মুক্ত থাকে (mode.active===false হলে দুটোই early-return করে, দেখুন
+      // showControls/hideControls) — তাই এটা "সবসময়ের জন্য" visible থাকে।
       allButtons.forEach(function (b) {
-        b.style.pointerEvents = (uiState.controlsExpanded && !b.disabled) ? 'auto' : 'none';
+        var hiddenInSiteMode = !active && b !== switchBtn;
+        CLS(b).toggle('ve-btn--hidden-site-mode', hiddenInSiteMode);
+        b.style.pointerEvents = (uiState.controlsExpanded && !b.disabled && !hiddenInSiteMode) ? 'auto' : 'none';
       });
       CLS(switchBtn).toggle('ve-btn--switch-site', !active);
       switchBtn.textContent = active ? L.SWITCH_ON : L.SWITCH_OFF;
@@ -513,6 +529,14 @@
       CLS(controlBar).add('ve-control-bar--hidden');
       applyMode();
       clearTimeout(uiState.autoHideTimer);
+    }
+    // প্যানেল visible থাকা অবস্থায় ভিডিও-এরিয়ায় নতুন কোনো ইন্টার‌্যাকশন
+    // (single tap, boost long-press, double-tap seek) এলে প্যানেলটা হাইড
+    // করে দেওয়ার জন্য — শুধু hidden অবস্থায় থাকলেই show করা উচিত, তাই
+    // toggle (show↔hide উভয় দিকেই সম্ভব), শুধু showControls না।
+    function toggleControls() {
+      if (uiState.controlsExpanded) hideControls();
+      else showControls();
     }
     function resetAutoHideTimer() {
       clearTimeout(uiState.autoHideTimer);
@@ -554,14 +578,17 @@
     var gestureCtl = attachUnifiedGestures(video, {
       leftZone: leftZone, centerZone: centerZone, rightZone: rightZone,
       boostBadge: boostBadge, seekBadgeL: seekBadgeL, seekBadgeR: seekBadgeR,
-      onSingleTap: showControls,
-      // long-press করে 2x boost চলাকালীন আঙুল স্ক্রিনে ধরে থাকা অবস্থাতেই
-      // auto-hide টাইমার (৩সে) ফায়ার করে প্যানেল হাইড করে দিতে পারত, যেটা
-      // active gesture-এর মাঝখানে জিনিসপত্র অদৃশ্য হয়ে যাওয়ার মতো দেখাত।
-      // বুস্ট শুরুর সাথে সাথে টাইমার থামিয়ে দেওয়া হচ্ছে, রিলিজ হলে (বা
-      // ৮সে সেফটি-ক্যাপে পৌঁছালে) আবার ফ্রেশ কাউন্টডাউন শুরু হচ্ছে।
-      onBoostStart: function () { clearTimeout(uiState.autoHideTimer); },
-      onBoostEnd: function () { resetAutoHideTimer(); }
+      // single tap: hidden থাকলে show, showing থাকলে hide (toggle)
+      onSingleTap: toggleControls,
+      // প্যানেল দেখা অবস্থায় long-press করে 2x বুস্ট শুরু হলে প্যানেলটা
+      // সরিয়ে দেওয়া হচ্ছে (হাইড না থাকলে কিছু করার নেই, তাই আলাদা করে
+      // auto-hide টাইমার ক্লিয়ার করারও দরকার নেই — hideControls() নিজেই
+      // সেটা করে)।
+      onBoostStart: function () { if (uiState.controlsExpanded) hideControls(); },
+      onBoostEnd: function () { resetAutoHideTimer(); },
+      // প্যানেল দেখা অবস্থায় ডাবল-ট্যাপ সিক (+10s/-10s) হলে প্যানেলটা
+      // সরিয়ে দেওয়া হচ্ছে।
+      onSeek: function () { if (uiState.controlsExpanded) hideControls(); }
     });
 
 
@@ -752,7 +779,7 @@
       }, CFG.BOOST_WATCHDOG_MS);
 
       clearTimeout(boostSafetyCap);
-      boostSafetyCap = setTimeout(endBoost, CFG.BOOST_MAX_DURATION_MS);
+      boostSafetyCap = setTimeout(endBoost, CFG.BOOST_SAFETY_BACKSTOP_MS);
     }
 
     function endBoost() {
@@ -807,7 +834,10 @@
       var s = seekSeq[side];
       s.count += 1;
       clearTimeout(s.timer);
-      if (s.count >= 2) doSeek(side, s.count - 1);
+      if (s.count >= 2) {
+        doSeek(side, s.count - 1);
+        if (refs.onSeek) refs.onSeek();
+      }
       // ৩৫০ms (MULTI_TAP_WINDOW_MS) অপেক্ষা করা হচ্ছে আরেকটা ট্যাপ আসে কিনা
       // দেখার জন্য। এই টাইমার যদি না-ক্যান্সেল হয়ে ফায়ার করে (মানে এর
       // মধ্যে আর কোনো ট্যাপ আসেনি), তখনই s.count-এর তখনকার মান দেখে বোঝা
