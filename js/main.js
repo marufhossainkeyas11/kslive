@@ -30,21 +30,26 @@
  *      relative + scroll offset compensate করা হচ্ছে, কারণ position:fixed
  *      viewport-এর সাপেক্ষে, document-এর সাপেক্ষে না)।
  *
- *  (I) CAPTURE-PHASE EVENT CONTAINMENT — শুধু `stopPropagation()` bubble-
- *      phase এ কল করা যথেষ্ট না, কারণ অনেক ভিডিও প্লেয়ার নিজেদের listener
- *      `document`/ancestor-এ **capture phase**-এ বসায় (তৃতীয় আর্গুমেন্ট
- *      `true`), যেটা bubble-phase stopPropagation-এর আগেই ফায়ার হয়ে যায়।
- *      এখন Ctrl:Us mode সক্রিয় থাকলে shadow root-এর প্রতিটা top-level
- *      element-এ pointer/mouse/touch/click পরিবারের ইভেন্টে capture-phase
- *      listener বসানো আছে যা `stopPropagation()` + `stopImmediatePropagation()`
- *      কল করে — অর্থাৎ ইভেন্ট composed path বেয়ে বাইরের document পর্যন্ত
- *      retarget হয়ে পৌঁছানোর আগেই থেমে যায়। সততার খাতিরে এটাও লেখা থাকা
- *      দরকার: browser spec অনুযায়ী composed ইভেন্ট শুরুতে outer document
- *      পর্যন্ত dispatch path তৈরি *করেই* — capture-phase interception এই
- *      path-কে "কার্যকরভাবে" থামায় (কোনো listener পরের ধাপ পায় না), কিন্তু
- *      কোনো API নেই যা browser-কে সেই dispatch path তৈরি করা থেকেই আটকায়।
- *      Ctrl:Site এ এই listener-গুলো disable থাকে, যাতে সাইট তখন স্বাভাবিক
- *      নিয়ন্ত্রণ ফিরে পায়।
+ *  (I) DOCUMENT-LEVEL BUBBLE-PHASE EVENT CONTAINMENT — আগে shadow root-এর
+ *      উপর capture-phase listener বসানো হয়েছিল, কিন্তু সেটা নিজেদের বাটনই
+ *      (fullscreen/rotate ইত্যাদি) কাজ করা বন্ধ করে দিয়েছিল — কারণ capture
+ *      phase বাইরে থেকে ভেতরে চলে, শেষ পর্যন্ত target-এ পৌঁছানোর *আগেই*
+ *      সেই listener stopPropagation কল করে ফেলছিল। এখন একটাই module-level
+ *      delegated listener `document`-এ **bubble-phase** এ (capture:false)
+ *      বসানো, যেটা shadow root-এর ভেতরের normal capture→target→bubble
+ *      flow (আমাদের বাটন handler সহ) সম্পূর্ণ হওয়ার *পরে* ফায়ার হয় —
+ *      composedPath() চেক করে দেখে ইভেন্টের উৎস কোনো active rig-এর
+ *      shadowHost-এর ভেতরে কিনা, হলে stopPropagation+stopImmediatePropagation
+ *      কল করে সেটা document পর্যন্ত bubble করা বন্ধ করে দেয়। এতে সাইটের
+ *      bubble-phase বা document-level delegated listener (বেশিরভাগ ভিডিও
+ *      প্লেয়ার এভাবেই কাজ করে) আর ইভেন্ট পায় না, অথচ নিজেদের বাটন স্বাভাবিক
+ *      থাকে। সততার খাতিরে: browser capture phase (document → ... →
+ *      target) সবসময় আগে ঘটে এবং সেটা browser নিজেই চালায় — কোনো bubble-
+ *      phase কোড সেটা থামাতে পারে না, তাই সাইটের কোনো capture-phase
+ *      listener থাকলে সেটা raw coordinate-level event এখনও দেখতে পারে
+ *      (বিরল কেস, বেশিরভাগ প্লেয়ার bubble-phase/delegated listener
+ *      ব্যবহার করে)। Ctrl:Site এ প্রতিটা rig নিজের ACTIVE_RIGS entry-তে
+ *      active flag false করে দেয়, তখন সাইট স্বাভাবিক নিয়ন্ত্রণ ফিরে পায়।
  *
  *  বাকি নীতি আগের সংস্করণ থেকেই বজায়:
  *  (A) single-source-of-truth mode switching, (B) playbackRate ownership
@@ -69,6 +74,9 @@
     // shadow root-এর ভেতরের <style> প্রতিটা rig destroy() এর সাথেই সরে
     // যায় (host সহ পুরো subtree remove হয়), তাই এখানে আলাদা করে
     // document-level style cleanup এর দরকার নেই।
+    if (window.__VE__ && window.__VE__._unbindDelegatedContainment) {
+      window.__VE__._unbindDelegatedContainment();
+    }
   }
 
   // ---------------- ছোট DOM/util helpers ----------------
@@ -121,6 +129,72 @@
 
   var STYLES_URL = 'https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/js/main.css';
   var CSS_TEXT = ''; // boot() এ fetch হয়ে বসে, প্রতিটা নতুন shadow root এই cached text ব্যবহার করে
+
+  // ---------------- MODULE-LEVEL EVENT CONTAINMENT ----------------
+  // per-rig আলাদা document listener বসানোর বদলে একটাই delegated listener,
+  // এবং সেটা IIFE evaluate হওয়ার সাথে সাথেই (script-এর একদম শুরুতে, কোনো
+  // fetch/DOM-ready wait ছাড়াই) বসানো হচ্ছে — যাতে পেইজের নিজস্ব script
+  // (যেটা সাধারণত পরে/async লোড হয়, বিশেষ করে bookmarklet/extension
+  // ইনজেকশনের ক্ষেত্রে) থেকে আমরা attach-order-এ যতটা সম্ভব আগে থাকি।
+  //
+  // ⚠️ গুরুত্বপূর্ণ: এই listener bubble-phase এ বসানো (capture:false), capture-
+  // phase এ না। কারণ:
+  //   composed dispatch order (bubbles:true) shadow DOM এ এমন —
+  //     ১) CAPTURE: document → ... → shadowHost → shadow root-এর ভেতরে →
+  //        ... → target  (বাইরে থেকে ভেতরে)
+  //     ২) TARGET: আমাদের বাটনের নিজের click handler
+  //     ৩) BUBBLE: target → ... → shadow root ancestors → shadowHost এ
+  //        retarget → ... → document  (ভেতর থেকে বাইরে)
+  //   যদি এই listener document-এ capture:true দিয়ে বসাই, সেটা ধাপ (১)-এর
+  //   একদম শুরুতে ফায়ার হবে — target-এ পৌঁছানোরও আগে — এবং
+  //   stopImmediatePropagation capture chain-কে target পর্যন্ত পৌঁছাতেই
+  //   দেবে না, ফলে নিজেদের বাটনই আবার কাজ করা বন্ধ হয়ে যাবে (এই বাগটাই
+  //   আগে root-এ listener বসিয়ে হয়েছিল, capture:true+document এও সেই একই
+  //   ভুল)। bubble-phase এ (capture:false) বসালে এটা ধাপ (৩)-এ, target
+  //   phase-এর *পরে* ফায়ার হয় — আমাদের নিজের বাটন handler ততক্ষণে চলে
+  //   গেছে, শুধু তারপর retargeted ইভেন্ট document পর্যন্ত bubble করা বন্ধ
+  //   হয়।
+  //
+  // সততার খাতিরে: bubble-phase এ থামানো মানে সাইটের কোনো capture-phase
+  // listener (document/ancestor-এ capture:true) তবুও ইভেন্টটা *দেখে
+  // ফেলবে* — কারণ capture ধাপ (১) bubble-phase containment-এর আগেই ঘটে
+  // যায়, এবং সেই ধাপ browser নিজে চালায়, আমাদের কোনো bubble-phase কোড
+  // সেটাকে থামাতে পারে না। এটা স্পেসিফিকেশনের সীমা — কোনো API নেই যা এটা
+  // এড়াতে দেয়। আমাদের containment তাই সাইটের bubble-phase listener এবং
+  // document-level delegated handler-দের (যেটা অধিকাংশ ভিডিও প্লেয়ার
+  // ব্যবহার করে) কার্যকরভাবে আটকায়, কিন্তু খুব কম ব্যবহৃত capture-phase
+  // listener-এর বিরুদ্ধে সম্পূর্ণ গ্যারান্টি দেয় না।
+  var ACTIVE_RIGS = []; // { shadowHost, active: boolean } — active=true মানে সেই rig-এর Ctrl:Us চালু
+
+  function delegatedContainEvent(e) {
+    var path = (typeof e.composedPath === 'function') ? e.composedPath() : [];
+    for (var i = 0; i < ACTIVE_RIGS.length; i++) {
+      var entry = ACTIVE_RIGS[i];
+      if (entry.active && path.indexOf(entry.shadowHost) !== -1) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        return;
+      }
+    }
+  }
+
+  var CONTAINED_EVENTS = ['pointerdown', 'pointerup', 'pointermove', 'pointercancel',
+    'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick',
+    'touchstart', 'touchend', 'touchmove', 'touchcancel', 'contextmenu', 'wheel'];
+
+  (function bindDelegatedContainmentNow() {
+    // document তখনো তৈরি না থাকলেও (theoretically) addEventListener কল
+    // নিরাপদ — বাস্তবে external script হিসেবে ইনজেক্ট হওয়ার সময় document
+    // সবসময় বিদ্যমান থাকে। capture:false (bubble-phase) — উপরের নোট দেখুন।
+    CONTAINED_EVENTS.forEach(function (evName) {
+      document.addEventListener(evName, delegatedContainEvent, { capture: false });
+    });
+    VE._unbindDelegatedContainment = function () {
+      CONTAINED_EVENTS.forEach(function (evName) {
+        document.removeEventListener(evName, delegatedContainEvent, { capture: false });
+      });
+    };
+  })();
 
   function init() {
     document.querySelectorAll('video').forEach(attachTo);
@@ -223,6 +297,16 @@
   }
 
   function syncRigSize(video, shadowHost, rig) {
+    // fullscreen চলাকালীন video সাময়িকভাবে videoSlot-এর ভেতরে (shadow
+    // root-এর subtree-তে) থাকে (attachFullscreenToggle দেখুন) — তখন
+    // video.getBoundingClientRect() আর পেইজের original layout position
+    // প্রতিফলিত করে না, বরং fullscreen host-এর ভেতরের অবস্থান দেখায়।
+    // shadowHost তখন নিজেই fullscreen element এবং UA স্বয়ংক্রিয়ভাবে
+    // viewport পূরণ করে, তাই এই geometry sync পুরোপুরি স্কিপ করা হচ্ছে —
+    // নাহলে video-এর slot-এর ভেতরের rect দিয়ে shadowHost-কেই resize করার
+    // চেষ্টা হতো, যেটা ভুল এবং অপ্রয়োজনীয়।
+    if (document.fullscreenElement === shadowHost) return;
+
     // position:fixed viewport-relative, তাই getBoundingClientRect() থেকে
     // সরাসরি left/top ব্যবহার করা যায় — কোনো parent offset বিয়োগ করার
     // দরকার নেই (আগে parent-relative absolute positioning এ যেটা লাগত)
@@ -279,6 +363,20 @@
   function buildRig(video, root, shadowHost) {
     var mode = { active: true };
     var uiState = { isFullscreen: false, controlsExpanded: true, autoHideTimer: null };
+
+    // fullscreen চাওয়া হয় shadowHost-এর উপর, video-এর উপর সরাসরি না (নিচে
+    // attachFullscreenToggle এর কমেন্ট দেখুন) — কারণ shadowHost video-এর
+    // sibling (document.body-এর direct child), descendant না। কিন্তু
+    // Fullscreen API শুধু requestFullscreen() করা element-এর subtree-কেই
+    // top-layer এ রেন্ডার করে — video নিজে shadowHost-এর subtree-তে না
+    // থাকলে fullscreen host খালি/কালো দেখাবে, video দেখা যাবে না। তাই
+    // fullscreen চলাকালীন video-কে DOM-এ সাময়িকভাবে এই videoSlot-এর ভেতরে
+    // সরিয়ে আনা হয় (attachFullscreenToggle এ), exit করলে ঠিক আগের
+    // parent/position এ ফেরত দেওয়া হয়। videoSlot বাকি সময় খালি থাকে —
+    // non-fullscreen অবস্থায় video-এর আসল DOM অবস্থান একদমই অপরিবর্তিত।
+    var videoSlot = DCE('div');
+    videoSlot.className = 've-video-slot';
+    APP(root, videoSlot);
 
     var scrim = DCE('div');
     scrim.className = 've-scrim';
@@ -338,7 +436,7 @@
     attachPlayPauseToggle(video, playBtn);
     var volCleanup = attachVolumeBoost(video, volBtn);
     attachFitToggle(video, fitBtn, function () { return uiState.isFullscreen; });
-    attachFullscreenToggle(video, shadowHost, fsBtn);
+    var fsCtl = attachFullscreenToggle(video, shadowHost, videoSlot, fsBtn);
     attachPipToggle(video, pipBtn);
     attachRotateToggle(rotateBtn);
 
@@ -353,35 +451,29 @@
     syncFullscreenGatedButtons();
 
     // Ctrl:Us সক্রিয় থাকলে shadow root-এর ভেতরে ঘটা কোনো pointer/mouse/
-    // touch/click ইভেন্ট যেন capture-phase এই থেমে যায় — bubble-phase
-    // stopPropagation যথেষ্ট না, কারণ কিছু সাইট নিজেদের video-control
-    // listener document/ancestor-এ capture:true দিয়ে বসায়, যেটা bubble-
-    // phase এর আগে ফায়ার হয়। composed retargeted ইভেন্ট shadow boundary
-    // পার হয়ে বাইরে dispatch হওয়ার path browser নিজে তৈরি করেই (এটা থামানোর
-    // কোনো API নেই), কিন্তু capture-phase এ stopPropagation+stopImmediate
-    // Propagation কল করলে dispatch chain-এর পরের কোনো listener (আমাদের
-    // নিজেরটা ছাড়া) সেই ইভেন্ট পায় না — কার্যকরভাবে containment হয়।
-    var CONTAINED_EVENTS = ['pointerdown', 'pointerup', 'pointermove', 'pointercancel',
-      'mousedown', 'mouseup', 'mousemove', 'click', 'dblclick',
-      'touchstart', 'touchend', 'touchmove', 'touchcancel', 'contextmenu', 'wheel'];
-    var containmentBound = false;
-    function containEvent(e) {
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }
-    function bindContainment() {
-      if (containmentBound) return;
-      containmentBound = true;
-      CONTAINED_EVENTS.forEach(function (evName) {
-        ON(root, evName, containEvent, { capture: true });
-      });
-    }
-    function unbindContainment() {
-      if (!containmentBound) return;
-      containmentBound = false;
-      CONTAINED_EVENTS.forEach(function (evName) {
-        OFF(root, evName, containEvent, { capture: true });
-      });
+    // touch/click ইভেন্ট যেন সাইটের document-level listener পর্যন্ত না
+    // পৌঁছায়। এটা `root`-এ বসানো যাবে না — কারণ capture phase বাইরে থেকে
+    // ভেতরে (document → ... → root → ... → target) চলে, root-এ
+    // stopPropagation কল করলে সেটা capture chain-কে root থেকে আসল target
+    // (যেমন আমাদের নিজের fsBtn/rotateBtn) পর্যন্ত পৌঁছানোর আগেই থামিয়ে
+    // দেয় — ফলে নিজেদের বাটনই কাজ করা বন্ধ হয়ে যাচ্ছিল।
+    //
+    // সঠিক জায়গা হলো একটাই module-level delegated listener, `document`-এ
+    // capture:true দিয়ে বসানো (উপরে bindDelegatedContainmentNow দেখুন)।
+    // shadow root-এর ভেতরের normal capture→target→bubble flow (আমাদের
+    // বাটন handler সহ) shadow boundary পার হওয়ার আগেই সম্পূর্ণ হয়ে যায়;
+    // তারপর composed ইভেন্ট retargeted হয়ে বাইরের document-এর capture
+    // phase-এ প্রবেশ করে, তখনই delegatedContainEvent তার composedPath()
+    // চেক করে দেখে উৎস এই rig-এরই shadowHost কিনা। এখানে rig শুধু
+    // ACTIVE_RIGS রেজিস্ট্রিতে নিজের entry-র active flag টগল করে — প্রতি
+    // rig-এ আলাদা document listener লাগে না।
+    var rigEntry = { shadowHost: shadowHost, active: true };
+    ACTIVE_RIGS.push(rigEntry);
+    function bindContainment() { rigEntry.active = true; }
+    function unbindContainment() { rigEntry.active = false; }
+    function removeFromRegistry() {
+      var idx = ACTIVE_RIGS.indexOf(rigEntry);
+      if (idx !== -1) ACTIVE_RIGS.splice(idx, 1);
     }
 
     function applyMode() {
@@ -461,17 +553,35 @@
       controlBar: controlBar,
       scrim: scrim,
       onFullscreenChange: function () {
-        uiState.isFullscreen = !!document.fullscreenElement;
-        fsBtn.textContent = uiState.isFullscreen ? L.EXIT_FULLSCREEN : L.FULLSCREEN;
+        // document.fullscreenElement সবসময় page-wide, এবং fullscreenchange
+        // listener প্রতিটা rig আলাদাভাবে document-এ বসায় (attachTo দেখুন) —
+        // তাই কোনো ভিন্ন video/rig fullscreen হলেও এটা ফায়ার হয়। শুধু
+        // truthy চেক করলে একাধিক video থাকা পেইজে সব rig ভুলভাবে নিজেকে
+        // "fullscreen active" মনে করত। === shadowHost চেক দিয়ে এই rig-ই
+        // আসল fullscreen element কিনা সেটা নিশ্চিত করা হচ্ছে।
+        var iAmFullscreen = document.fullscreenElement === shadowHost;
+        uiState.isFullscreen = iAmFullscreen;
+        fsBtn.textContent = iAmFullscreen ? L.EXIT_FULLSCREEN : L.FULLSCREEN;
         syncFullscreenGatedButtons();
+        // fullscreen বন্ধ হয়ে গেলে (ESC, browser back, অন্য কোনোভাবে —
+        // শুধু আমাদের fsBtn ক্লিক না) video যেন সবসময় আগের DOM জায়গায়
+        // ফেরত যায়, তাই এখানেও restore কল করা — fsCtl.restoreIfMoved()
+        // ইতিমধ্যে restore হয়ে থাকলে কিছু করে না (idempotent)।
+        if (!iAmFullscreen) fsCtl.restoreIfMoved();
       },
       destroy: function () {
         gestureCtl.forceReset();
         gestureCtl.destroy();
         if (volCleanup) volCleanup();
         unbindContainment();
+        removeFromRegistry();
         OFF(document, 'visibilitychange', onVisChange);
         OFF(window, 'blur', onBlur);
+        // shadowHost.remove() এর আগে video ফেরত পাঠাতে হবে যদি সেটা এখন
+        // videoSlot-এর ভেতরে থাকে (fullscreen চলাকালীন destroy হলে) —
+        // নাহলে shadowHost.remove() video-সহ পুরো subtree DOM থেকে সরিয়ে
+        // দেবে, video পেইজ থেকেই হারিয়ে যাবে।
+        fsCtl.restoreIfMoved();
         // shadowHost.remove() পুরো shadow subtree (gestureLayer, scrim,
         // controlBar, badges, <style>) একবারেই সরিয়ে দেয়
         shadowHost.remove();
@@ -701,17 +811,70 @@
     };
   }
 
-  function attachFullscreenToggle(video, shadowHost, btn) {
-    if (!SUPPORTS_FULLSCREEN) return;
+  // ফিরে দেওয়া অবজেক্টের isMine()/restoreIfMoved() rig-এর নিজস্ব
+  // fullscreenchange হ্যান্ডলারে কল হয় (buildRig-এ), যাতে ESC/browser
+  // back/অন্য কোনো rig-এর fullscreen change — কোনো কারণেই video আটকে না
+  // থাকে বা ভুল rig এটা restore করার চেষ্টা না করে।
+  function attachFullscreenToggle(video, shadowHost, videoSlot, btn) {
+    if (!SUPPORTS_FULLSCREEN) {
+      return { isMine: function () { return false; }, restoreIfMoved: function () {} };
+    }
+
+    // video আসল DOM-এ যেখানে ছিল, ঠিক সেই জায়গায় ফেরত দিতে হবে — শুধু
+    // parentNode জানলেই যথেষ্ট না (parent-এ একাধিক sibling থাকতে পারে),
+    // তাই nextSibling ও রাখা হচ্ছে যাতে insertBefore দিয়ে ঠিক আগের স্থানে
+    // বসানো যায়।
+    var originalParent = null;
+    var originalNextSibling = null;
+    var moved = false;
+
+    function moveIntoSlot() {
+      if (moved) return;
+      originalParent = video.parentNode;
+      originalNextSibling = video.nextSibling;
+      videoSlot.appendChild(video);
+      moved = true;
+    }
+
+    function restoreIfMoved() {
+      if (!moved) return;
+      if (originalParent) {
+        originalParent.insertBefore(video, originalNextSibling);
+      }
+      moved = false;
+      originalParent = null;
+      originalNextSibling = null;
+    }
+
     ON(btn, 'click', async function (e) {
       e.stopPropagation();
       try {
-        if (document.fullscreenElement) await document.exitFullscreen();
-        else if (video.requestFullscreen) await video.requestFullscreen();
+        if (document.fullscreenElement === shadowHost) {
+          await document.exitFullscreen();
+          // exitFullscreen() রিজলভ হলেই 'fullscreenchange' ফায়ার হবে,
+          // কিন্তু restore এখানেও আগেভাগে কল করা নিরাপদ (moved flag
+          // দিয়ে idempotent) — ধীরগতির fullscreenchange dispatch-এর
+          // জন্য অপেক্ষা না করেই video যেন দ্রুত পুরনো জায়গায় ফেরে।
+          restoreIfMoved();
+        } else if (shadowHost.requestFullscreen) {
+          // video-কে shadowHost-এর subtree-তে না আনলে fullscreen host
+          // খালি দেখাবে (উপরে videoSlot তৈরির কমেন্ট দেখুন) — তাই আগে
+          // move, তারপরেই requestFullscreen। কোনো কারণে requestFullscreen
+          // reject হলে (catch ব্লকে) video সাথে সাথেই ফেরত পাঠানো হয়,
+          // যাতে fullscreen ছাড়াই video হারিয়ে/লুকিয়ে না থাকে।
+          moveIntoSlot();
+          await shadowHost.requestFullscreen();
+        }
       } catch (err) {
         console.warn('[video-enhancer] fullscreen toggle failed:', err.message);
+        restoreIfMoved();
       }
     });
+
+    return {
+      isMine: function () { return moved; },
+      restoreIfMoved: restoreIfMoved
+    };
   }
 
   function attachPipToggle(video, btn) {
