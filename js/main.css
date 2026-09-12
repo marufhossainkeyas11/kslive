@@ -1,16 +1,11 @@
 /* ---------- Shadow boundary reset ---------- */
 :host {
   all: initial;
-  /* host নিজে কোনো layout box রাখে না, ভেতরের absolute-positioned
-     child-রাই আসল সাইজ/অবস্থান বহন করে। position/left/top/z-index এখানে
-     ইচ্ছাকৃতভাবে নেই — main.js ইনলাইনে সেট করে (উপরের NOTE দেখুন) */
   display: block;
   width: 0; height: 0;
   pointer-events: none;
 }
 
-/* shadow root এর ভেতরের সব element এই বেসলাইন থেকে শুরু করবে, পেইজের
-   কোনো inherited টাইপোগ্রাফি/কালার এখানে ঢুকবে না */
 :host * {
   box-sizing: border-box;
   font-family: sans-serif;
@@ -57,7 +52,7 @@
   pointer-events: none;
 }
 
-/* ---------- Badges (2x / seek) ---------- */
+/* ---------- Badges (2X / seek) ---------- */
 .ve-badge {
   position: absolute;
   background: rgba(0, 0, 0, 0.72);
@@ -101,19 +96,19 @@
   transition: opacity .2s ease, transform .2s ease;
   opacity: 1;
   transform: translateY(0);
-  /* wrapper নিজে কখনো ইনপুট নেয় না — শুধু লেআউট স্পেসের জন্য; প্রতিটা বাটন
-     নিজে আলাদাভাবে pointer-events চালু/বন্ধ হয় (main.js এ) */
   pointer-events: none;
 }
 .ve-control-bar--hidden {
   opacity: 0;
   transform: translateY(-6px);
 }
+/* Ctrl:Site মোডে হলুদ ইন্ডিকেটর বাম কিনারায় রাখতে চাইলে এই ক্লাস যুক্ত হয়
+   (applyIndicatorLayout দেখুন) — Ctrl:Us মোডে কখনো লাগে না */
+.ve-control-bar--site-left {
+  justify-content: flex-start;
+}
 
 .ve-btn {
-  /* BUGFIX: flex-wrap কন্টেইনারে explicit shrink/grow বন্ধ না রাখলে ছোট
-     viewport এ বাটন stretch হয়ে পুরো bar জুড়ে যেতে পারত — flex:0 0 auto
-     দিয়ে প্রতিটা বাটনকে তার নিজের content-size এ পিন করে রাখা হচ্ছে */
   flex: 0 0 auto;
   max-width: max-content;
   border: none;
@@ -127,7 +122,7 @@
   cursor: pointer;
   box-shadow: 0 1px 3px rgba(0,0,0,.4);
   transition: transform .1s ease, background .15s ease, opacity .15s ease;
-  pointer-events: none; /* ডিফল্ট বন্ধ — main.js প্রয়োজনে auto করে */
+  pointer-events: none;
 }
 .ve-btn--desktop {
   font-size: 11px;
@@ -144,9 +139,39 @@
   color: #000;
 }
 
-/* Ctrl:Site মোডে switchBtn ছাড়া বাকি সব বাটন এনিমেশন সহ হাইড+কোল্যাপ্স
-   হয়ে যায় — fade + scale-down + max-width কোল্যাপ্স, যাতে খালি জায়গা
-   পড়ে না থেকে switchBtn নিজের জায়গায় পরিপাটিভাবে থাকে */
+/* ---------- Ctrl:Site ইন্ডিকেটর গ্রুপ (হলুদ বাটন + সাইড-টগল arrow) ---------- */
+.ve-indicator-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  max-width: max-content;
+}
+/* গ্রুপের দুই বাটনের একে-অপরের-মুখোমুখি কোণ ছোট radius পায় (জোড়া-লাগানো
+   লুক), বাইরের কোণ (স্ক্রিন-কিনারার দিকেরটা ও গ্রুপ থেকে দূরেরটা) স্বাভাবিক
+   radius পায়। DOM অর্ডার indicatorSide অনুযায়ী পাল্টায় (main.js দেখুন), তাই
+   :first-child/:last-child স্বয়ংক্রিয়ভাবেই সঠিক পাশ ধরে ফেলে। */
+.ve-indicator-group .ve-btn:first-child {
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
+.ve-indicator-group .ve-btn:last-child {
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+}
+.ve-btn--side-toggle {
+  background: #fc0e;
+  color: #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 8px;
+}
+.ve-caret {
+  display: block;
+  transition: transform .15s ease;
+}
+
 .ve-btn--hidden-site-mode {
   opacity: 0;
   transform: scale(.7);
@@ -158,12 +183,4 @@
   margin-right: 0;
   overflow: hidden;
   transition: transform .18s ease, opacity .15s ease, max-width .18s ease, padding .18s ease;
-}
-
-.ve-control-bar--site-left {
-  justify-content: flex-start;
-}
-.ve-btn--side-toggle {
-  padding-left: 8px;
-  padding-right: 8px;
 }
