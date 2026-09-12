@@ -159,3 +159,11 @@
   overflow: hidden;
   transition: transform .18s ease, opacity .15s ease, max-width .18s ease, padding .18s ease;
 }
+
+.ve-control-bar--site-left {
+  justify-content: flex-start;
+}
+.ve-btn--side-toggle {
+  padding-left: 8px;
+  padding-right: 8px;
+}
