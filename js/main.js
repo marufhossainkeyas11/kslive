@@ -139,10 +139,10 @@
   }
 
   var STYLES_URL = 'https://raw.githubusercontent.com/marufhossainkeyas11/kslive/refs/heads/main/js/main.css';
-  var CSS_TEXT = ''; // boot() এ fetch হয়ে বসে, প্রতিটা নতুন shadow root এই cached text ব্যবহার করে
+  var CSS_TEXT = '';
 
   // ---------------- MODULE-LEVEL EVENT CONTAINMENT ----------------
-  var ACTIVE_RIGS = []; // { shadowHost, active: boolean } — active=true মানে সেই rig-এর Ctrl:Us চালু
+  var ACTIVE_RIGS = [];
 
   function delegatedContainEvent(e) {
     var path = (typeof e.composedPath === 'function') ? e.composedPath() : [];
@@ -245,7 +245,7 @@
     host.style.padding = '0';
     host.style.border = '0';
     host.style.pointerEvents = 'none';
-    host.style.zIndex = '2147483647'; // max safe 32-bit z-index
+    host.style.zIndex = '2147483647';
     APP(document.body, host);
     return host;
   }
@@ -304,6 +304,13 @@
     return { show: show, hide: hide };
   }
 
+  // caret SVG (bootstrap bi-caret-right-fill এর path) — ডানমুখী ডিফল্ট,
+  // বামমুখী দরকার হলে transform: scaleX(-1) দিয়ে ফ্লিপ করা হয় (setCaretDirection)
+  function makeCaretSVG() {
+    return '<svg class="ve-caret" xmlns="http://www.w3.org/2000/svg" width="14" height="14" ' +
+      'fill="currentColor" viewBox="0 0 16 16"><path d="m12.14 8.753-5.482 4.796c-.646.566-1.658.106-1.658-.753V3.204a1 1 0 0 1 1.659-.753l5.48 4.796a1 1 0 0 1 0 1.506z"/></svg>';
+  }
+
   function buildRig(video, root, shadowHost) {
     var mode = { active: true }; // ডিফল্ট: শুরুতে স্ক্রিন আমাদের (Ctrl:Us) দখলে
     var uiState = { isFullscreen: false, controlsExpanded: true, autoHideTimer: null };
@@ -353,19 +360,32 @@
     var pipBtn = makeButton(L.PIP, 'Picture-in-Picture');
     var rotateBtn = makeButton(L.ROTATE, 'Rotate to landscape');
     var switchBtn = makeButton(L.SWITCH_ON, 'Switch control between overlay and site');
-    // Ctrl:Site মোডে switchBtn-এর পাশে থাকা ছোট বাটন — ক্লিক করলে হলুদ
-    // switchBtn-টা বাম/ডান পাশে সরে যায় (সাইটের নিজস্ব কন্ট্রোলের সাথে
-    // ওভারল্যাপ এড়াতে)
-    var sideToggleBtn = makeButton('◂', 'Move indicator to the other side');
+    // Ctrl:Site মোডে হলুদ switchBtn-কে বাম/ডান কিনারায় সরানোর বাটন —
+    // caret SVG icon, switchBtn-এর মতোই হলুদ রঙের
+    var sideToggleBtn = makeButton(makeCaretSVG(), 'Move indicator to the other side', true);
     CLS(sideToggleBtn).add('ve-btn--side-toggle');
+    var sideToggleCaret = sideToggleBtn.querySelector('svg');
     var closeBtn = makeButton(L.CLOSE, 'Hide controls');
     CLS(closeBtn).add('ve-btn--close');
 
     var allButtons = [playBtn, volBtn, fitBtn, fsBtn, pipBtn, rotateBtn, switchBtn, closeBtn];
-    allButtons.forEach(function (b) { APP(controlBar, b); });
-    // switchBtn-এর ঠিক আগে বসানো হচ্ছে, যাতে flex-end লেআউটে এটা
-    // switchBtn-এর বাম পাশে দেখা যায়
-    controlBar.insertBefore(sideToggleBtn, switchBtn);
+    // switchBtn আর closeBtn আলাদাভাবে বসানো হবে (নিচে দেখুন) যাতে switchBtn
+    // sideToggleBtn-এর সাথে একটা গ্রুপে থাকে, কিন্তু closeBtn আগের মতোই
+    // সবার শেষে (সবচেয়ে ডানে/edge-এ) থাকে
+    allButtons.forEach(function (b) {
+      if (b === switchBtn || b === closeBtn) return;
+      APP(controlBar, b);
+    });
+
+    // sideToggleBtn + switchBtn একসাথে একটা গ্রুপে — এদের ভেতরের DOM অর্ডার
+    // indicatorSide অনুযায়ী পাল্টায় (applyIndicatorLayout দেখুন), CSS-এর
+    // :first-child/:last-child তখন স্বয়ংক্রিয়ভাবেই সঠিক পাশের কোণ ছোট করে
+    var indicatorGroup = DCE('div');
+    indicatorGroup.className = 've-indicator-group';
+    APP(indicatorGroup, sideToggleBtn);
+    APP(indicatorGroup, switchBtn);
+    APP(controlBar, indicatorGroup);
+    APP(controlBar, closeBtn);
 
     if (!SUPPORTS_FULLSCREEN) fsBtn.style.display = 'none';
     if (!SUPPORTS_PIP) pipBtn.style.display = 'none';
@@ -397,17 +417,31 @@
       if (idx !== -1) ACTIVE_RIGS.splice(idx, 1);
     }
 
-    // হলুদ switchBtn বাম/ডান কোন পাশে থাকবে — sideToggleBtn ক্লিকে টগল হয়
-    var indicatorSide = 'right';
-    function applyIndicatorSide() {
-      CLS(controlBar).toggle('ve-control-bar--site-left', indicatorSide === 'left');
-      sideToggleBtn.textContent = indicatorSide === 'left' ? '▸' : '◂';
+    // ---------- হলুদ ইন্ডিকেটরের পাশ (বাম/ডান) মনে রাখা ও প্রয়োগ ----------
+    var indicatorSide = 'right'; // ডিফল্ট: ডান কিনারা
+    function setCaretDirection(dir) {
+      sideToggleCaret.style.transform = dir === 'left' ? 'scaleX(-1)' : '';
     }
-    applyIndicatorSide();
+    function applyIndicatorLayout() {
+      // controlBar পুরোটা বাম দিকে সরে যাওয়া শুধু Ctrl:Site মোডেই হওয়া
+      // উচিত — Ctrl:Us মোডে সবসময় আগের মতো ডান-কিনারার স্বাভাবিক ডিজাইন
+      CLS(controlBar).toggle('ve-control-bar--site-left', !mode.active && indicatorSide === 'left');
+      if (indicatorSide === 'left') {
+        // বাম কিনারায় ডক: yellow বাটন কিনারার (বামের) দিকে, arrow তার
+        // ভেতরের (ডান) পাশে, ডানমুখী (চাপলে ডানে সরবে)
+        indicatorGroup.insertBefore(switchBtn, sideToggleBtn);
+        setCaretDirection('right');
+      } else {
+        // ডান কিনারায় ডক: yellow বাটন কিনারার (ডানের) দিকে, arrow তার
+        // ভেতরের (বাম) পাশে, বামমুখী (চাপলে বামে সরবে)
+        indicatorGroup.insertBefore(sideToggleBtn, switchBtn);
+        setCaretDirection('left');
+      }
+    }
     ON(sideToggleBtn, 'click', function (e) {
       e.stopPropagation();
       indicatorSide = indicatorSide === 'right' ? 'left' : 'right';
-      applyIndicatorSide();
+      applyIndicatorLayout();
     });
 
     function applyMode() {
@@ -427,6 +461,7 @@
       CLS(switchBtn).toggle('ve-btn--switch-site', !active);
       switchBtn.textContent = active ? L.SWITCH_ON : L.SWITCH_OFF;
       if (active) bindContainment(); else unbindContainment();
+      applyIndicatorLayout();
     }
 
     function showControls() {
@@ -465,11 +500,8 @@
     ON(controlBar, 'pointerdown', resetAutoHideTimer);
 
     // Zoom(pinch) দিয়ে fullscreen → rotate → fit — এই ক্রমে state এগোয়
-    // (zoom in/pinch-in), zoom out এ ঠিক উল্টো ক্রমে ফেরে। rotate lock
-    // সাপোর্ট না থাকলে (ডেস্কটপ/iOS Safari) সেই ধাপ স্কিপ হয়ে সরাসরি
-    // fullscreen↔fit চলে। mode.active===false এ gestureLayer/shadowHost-এর
-    // pointer-events:none থাকায় এমনিতেই touch আমাদের পর্যন্ত পৌঁছায় না,
-    // তবু সততার খাতিরে এখানেও এক্সপ্লিসিট চেক রাখা হলো।
+    // (zoom in), zoom out এ ঠিক উল্টো ক্রমে ফেরে। rotate lock সাপোর্ট না
+    // থাকলে সেই ধাপ স্কিপ হয়ে সরাসরি fullscreen↔fit চলে।
     function handleZoomIn() {
       if (!mode.active) return;
       if (!uiState.isFullscreen) { fsCtl.toggle(); return; }
@@ -548,10 +580,10 @@
     };
   }
 
-  function makeButton(label, title) {
+  function makeButton(label, title, isHTML) {
     var b = DCE('button');
     b.type = 'button';
-    b.textContent = label;
+    if (isHTML) b.innerHTML = label; else b.textContent = label;
     b.title = title;
     b.className = 've-btn' + (IS_TOUCH ? '' : ' ve-btn--desktop');
     ON(b, 'pointerdown', function () { if (!b.disabled) b.style.transform = 'scale(.92)'; });
@@ -629,10 +661,8 @@
     var seekSeq = { left: { count: 0, timer: null }, right: { count: 0, timer: null } };
     var centerSeq = { count: 0, timer: null };
 
-    // ---------- ২-আঙুল Zoom/Pinch ট্র্যাকিং (single-finger লজিক থেকে
-    // আলাদা; ২য় আঙুল নামলেই forceReset() কল করে single-finger অংশ বাতিল
-    // হয়ে যায়, নাহলে দুই zone-এ activePointerId ওভাররাইট হয়ে বাগ হতো) ----------
-    var pinchPointers = {}; // pointerId(string) -> {x, y}
+    // ---------- ২-আঙুল Zoom/Pinch ট্র্যাকিং ----------
+    var pinchPointers = {};
     var pinchCount = 0;
     var pinchStartDist = 0;
     var pinchStartCenter = { x: 0, y: 0 };
@@ -755,9 +785,7 @@
     // বুস্ট চলাকালীন zone-এর নিজস্ব pointerup/pointercancel কোনো কারণে
     // (buffering-এর সময় shadow DOM hit-test shift ইত্যাদি) মিস হয়ে গেলেও
     // যেন বুস্ট আঙুল ছাড়ার সাথে সাথেই থামে — capture-phase এ document-এ
-    // বসানো এই ব্যাকআপ target-phase-এর *আগেই* ফায়ার করে। zone-level
-    // handler পরে আবার endPress() কল করলেও ততক্ষণে activePointerId null
-    // থাকায় নিরাপদে কিছুই করে না (duplicate-call-safe)।
+    // বসানো এই ব্যাকআপ target-phase-এর *আগেই* ফায়ার করে।
     function handleGlobalPointerEnd(e) {
       if (activePointerId !== e.pointerId) return;
       if (isBoosting) {
@@ -792,9 +820,7 @@
       if (!(key in pinchPointers)) pinchCount += 1;
       pinchPointers[key] = { x: e.clientX, y: e.clientY };
       if (pinchCount === 2) {
-        // ২য় আঙুল নামলো — single-finger tap/press/boost বাতিল করে দিয়ে
-        // এখন থেকে এটা সম্ভাব্য pinch হিসেবে ট্র্যাক করা হবে
-        forceReset();
+        forceReset(); // ২য় আঙুল নামলো — single-finger tap/press/boost বাতিল
         pinchStartDist = pinchDist();
         pinchStartCenter = pinchCenter();
         pinchStartTime = performance.now();
@@ -822,13 +848,10 @@
       if (pinchConfirmed) { e.preventDefault(); return; }
 
       if (centroidDrift > driftLimit && scaleDelta < CFG.PINCH_MIN_SCALE_DELTA) {
-        // দুই আঙুল একসাথে সরছে (pan/drag), distance বদলাচ্ছে না — pinch না
-        resetPinchTracking();
+        resetPinchTracking(); // দুই আঙুল একসাথে সরছে (pan) — pinch না
         return;
       }
       if (scaleDelta >= CFG.PINCH_MIN_SCALE_DELTA) {
-        // দিক একবারই ঠিক হয় (প্রথম confirm-এর মুহূর্তে); মাঝপথে দিক
-        // পাল্টালেও এই gesture-এর জন্য প্রথম দিকটাই ধরা থাকবে
         pinchConfirmed = true;
         pinchDirection = rawScale > 1 ? 'in' : 'out';
         e.preventDefault();
@@ -879,14 +902,14 @@
       bind(zone, 'touchstart', NOPE, { passive: false });
     });
 
-    // pinch ট্র্যাকিং gestureLayer লেভেলে (zone-দের parent) — দুই আঙুল
-    // দুই ভিন্ন zone-এ পড়লেও bubble করে এখানেই দুটো পয়েন্টার ধরা পড়ে
+    // pinch ট্র্যাকিং gestureLayer লেভেলে — দুই আঙুল দুই ভিন্ন zone-এ পড়লেও
+    // bubble করে এখানেই দুটো পয়েন্টার ধরা পড়ে
     bind(refs.gestureLayer, 'pointerdown', onGesturePointerDown);
     bind(refs.gestureLayer, 'pointermove', onGesturePointerMove);
     bind(refs.gestureLayer, 'pointerup', onGesturePointerUp);
     bind(refs.gestureLayer, 'pointercancel', onGesturePointerUp);
 
-    // বুস্ট-রিলিজ ব্যাকআপ (capture:true, document) — উপরের নোট দেখুন
+    // বুস্ট-রিলিজ ব্যাকআপ (capture:true, document)
     bind(document, 'pointerup', handleGlobalPointerEnd, { capture: true });
     bind(document, 'pointercancel', handleGlobalPointerEnd, { capture: true });
 
@@ -1017,8 +1040,6 @@
       return !!(document.fullscreenElement && document.fullscreenElement.contains(video));
     }
 
-    // মূল toggle লজিক — বাটন ক্লিক আর zoom-gesture state machine দুটো
-    // জায়গা থেকেই এই একই ফাংশন কল হয়, যাতে লজিক ডুপ্লিকেট না হয়
     async function performToggle() {
       if (isActive()) {
         try { await document.exitFullscreen(); } catch (err) {
